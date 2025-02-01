@@ -12,6 +12,7 @@ import {
   Send,
   Settings2,
   SquareTerminal,
+  Share2,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -30,34 +31,29 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
       name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
+      logo: Frame,
       plan: "Free",
     },
   ],
+  user: {
+    name: "Lucas Machado",
+    email: "lucas@example.com",
+    avatar: "https://github.com/shadcn.png",
+  },
   navMain: [
+    {
+      title: "Flow Editor",
+      url: "/dashboard/flow",
+      icon: Share2,
+      isActive: true,
+    },
     {
       title: "Playground",
       url: "#",
       icon: SquareTerminal,
-      isActive: true,
       items: [
         {
           title: "History",
