@@ -1,5 +1,7 @@
 import * as React from "react"
+import { Link } from "react-router-dom"
 import { type LucideIcon } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 import {
   SidebarGroup,
@@ -17,6 +19,7 @@ export function NavSecondary({
     title: string
     url: string
     icon: LucideIcon
+    isThemeToggle?: boolean
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -25,12 +28,16 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild size="sm">
-                <a href={item.url}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </a>
-              </SidebarMenuButton>
+              {item.isThemeToggle ? (
+                <ThemeToggle />
+              ) : (
+                <SidebarMenuButton asChild size="sm">
+                  <Link to={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
             </SidebarMenuItem>
           ))}
         </SidebarMenu>

@@ -1,18 +1,15 @@
 import React from "react"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
-        <SidebarProvider>
-          {children}
-        </SidebarProvider>
-      </body>
-    </html>
+    <SidebarProvider>
+      <AppSidebar />
+      <main>
+        <SidebarTrigger />
+        {children}
+      </main>
+    </SidebarProvider>
   )
-} 
+}

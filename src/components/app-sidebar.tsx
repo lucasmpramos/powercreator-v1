@@ -12,13 +12,18 @@ import {
   Send,
   Settings2,
   SquareTerminal,
+  Share2,
+  FormInput,
+  LayoutDashboard,
+  Users,
+  Moon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { TeamSwitcher } from "@/components/teamswitcher"
 import {
   Sidebar,
   SidebarContent,
@@ -30,34 +35,43 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
       name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
+      logo: Frame,
       plan: "Free",
     },
   ],
+  user: {
+    name: "Lucas Machado",
+    email: "lucas@example.com",
+    avatar: "https://github.com/shadcn.png",
+  },
   navMain: [
+    {
+      title: "Dashboard",
+      url: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Agents",
+      url: "/admin/agents",
+      icon: Users,
+    },
+    {
+      title: "Flow Editor",
+      url: "/admin/flow",
+      icon: Share2,
+    },
+    {
+      title: "Form Builder",
+      url: "/admin/forms",
+      icon: FormInput,
+    },
     {
       title: "Playground",
       url: "#",
       icon: SquareTerminal,
-      isActive: true,
       items: [
         {
           title: "History",
@@ -140,6 +154,12 @@ const data = {
     },
   ],
   navSecondary: [
+    {
+      title: "Theme",
+      url: "#theme",
+      icon: Moon,
+      isThemeToggle: true,
+    },
     {
       title: "Support",
       url: "#",
