@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { AdminBreadcrumb } from "@/components/admin-breadcrumb"
+import { AdminBreadcrumb } from "@/components/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"

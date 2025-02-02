@@ -17,14 +17,13 @@ import {
   LayoutDashboard,
   Users,
   Moon,
-  Zap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { TeamSwitcher } from "@/components/teamswitcher"
 import {
   Sidebar,
   SidebarContent,
@@ -38,9 +37,9 @@ import {
 const data = {
   teams: [
     {
-      name: "PowerCreator",
-      logo: Zap,
-      plan: "Admin",
+      name: "Acme Inc",
+      logo: Frame,
+      plan: "Free",
     },
   ],
   user: {
