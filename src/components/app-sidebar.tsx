@@ -13,6 +13,11 @@ import {
   Settings2,
   SquareTerminal,
   Share2,
+  FormInput,
+  LayoutDashboard,
+  Users,
+  Moon,
+  Zap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -33,9 +38,9 @@ import {
 const data = {
   teams: [
     {
-      name: "Acme Inc",
-      logo: Frame,
-      plan: "Free",
+      name: "PowerCreator",
+      logo: Zap,
+      plan: "Admin",
     },
   ],
   user: {
@@ -45,10 +50,24 @@ const data = {
   },
   navMain: [
     {
+      title: "Dashboard",
+      url: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Agents",
+      url: "/admin/agents",
+      icon: Users,
+    },
+    {
       title: "Flow Editor",
-      url: "/dashboard/flow",
+      url: "/admin/flow",
       icon: Share2,
-      isActive: true,
+    },
+    {
+      title: "Form Builder",
+      url: "/admin/forms",
+      icon: FormInput,
     },
     {
       title: "Playground",
@@ -136,6 +155,12 @@ const data = {
     },
   ],
   navSecondary: [
+    {
+      title: "Theme",
+      url: "#theme",
+      icon: Moon,
+      isThemeToggle: true,
+    },
     {
       title: "Support",
       url: "#",

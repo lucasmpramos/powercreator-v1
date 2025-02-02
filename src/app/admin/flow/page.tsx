@@ -27,7 +27,7 @@ export default function FlowPage() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                  <BreadcrumbLink href="/admin/dashboard">Dashboard</BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
@@ -38,7 +38,7 @@ export default function FlowPage() {
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Flow Editor</h2>
               <p className="text-muted-foreground">
