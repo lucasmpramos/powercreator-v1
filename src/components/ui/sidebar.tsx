@@ -2,7 +2,6 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
-import Cookies from 'js-cookie'
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -18,13 +17,31 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-const SIDEBAR_COOKIE_NAME = "sidebar:state"
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
+// Sidebar constants
+const SIDEBAR_STATE_KEY = "sidebar:state"
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
-const SIDEBAR_STATE_KEY = "sidebar:state"
+
+// Helper function to manage localStorage
+const storage = {
+  get: (defaultValue: boolean = true) => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_STATE_KEY)
+      return stored !== null ? stored === "true" : defaultValue
+    } catch {
+      return defaultValue
+    }
+  },
+  set: (value: boolean) => {
+    try {
+      localStorage.setItem(SIDEBAR_STATE_KEY, String(value))
+    } catch {
+      // Ignore storage errors
+    }
+  }
+}
 
 type SidebarContext = {
   state: "expanded" | "collapsed"
@@ -43,7 +60,6 @@ function useSidebar() {
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.")
   }
-
   return context
 }
 
@@ -71,26 +87,13 @@ const SidebarProvider = React.forwardRef<
     const [openMobile, setOpenMobile] = React.useState(false)
 
     // Initialize from localStorage
-    const [_open, _setOpen] = React.useState(() => {
-      try {
-        const stored = localStorage.getItem(SIDEBAR_STATE_KEY)
-        return stored !== null ? stored === "true" : defaultOpen
-      } catch {
-        return defaultOpen
-      }
-    })
-
+    const [_open, _setOpen] = React.useState(() => storage.get(defaultOpen))
     const open = openProp ?? _open
     
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
-        
-        try {
-          localStorage.setItem(SIDEBAR_STATE_KEY, String(openState))
-        } catch {
-          // Ignore storage errors
-        }
+        storage.set(openState)
         
         if (setOpenProp) {
           setOpenProp(openState)
