@@ -3,6 +3,7 @@ import { AdminBreadcrumb } from "@/components/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { PageHeader } from "@/components/page-header"
 import {
   SidebarInset,
   SidebarProvider,
@@ -48,12 +49,10 @@ export default function DashboardPage() {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-              <p className="text-muted-foreground">
-                Overview of your content generation activities
-              </p>
-            </div>
+            <PageHeader
+              heading="Dashboard"
+              description="Overview of your content generation activities"
+            />
           </div>
 
           {/* Stats Grid */}

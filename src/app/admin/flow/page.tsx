@@ -8,6 +8,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
+import { PageHeader } from "@/components/page-header"
 import {
   SidebarInset,
   SidebarProvider,
@@ -39,12 +40,10 @@ export default function FlowPage() {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">Flow Editor</h2>
-              <p className="text-muted-foreground">
-                Create and edit your workflow diagrams
-              </p>
-            </div>
+            <PageHeader
+              heading="Flow Editor"
+              description="Create and edit your workflow diagrams"
+            />
           </div>
           <div className="h-[calc(100vh-12rem)]">
             <FlowEditor />

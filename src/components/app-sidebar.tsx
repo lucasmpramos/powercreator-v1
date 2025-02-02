@@ -17,6 +17,8 @@ import {
   LayoutDashboard,
   Users,
   Moon,
+  Bolt,
+  Zap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -37,15 +39,15 @@ import {
 const data = {
   teams: [
     {
-      name: "Acme Inc",
-      logo: Frame,
-      plan: "Free",
+      name: "PowerCreator®",
+      logo: Zap,
+      plan: "Master Admin",
     },
   ],
   user: {
     name: "Lucas Machado",
     email: "lucas@example.com",
-    avatar: "https://github.com/shadcn.png",
+    avatar: "https://cdn.prod.website-files.com/64f0f38aac3a1c140e6f95ed/64f0fc17b6a934dc0915fcef_profile_gf23-p-500.avif",
   },
   navMain: [
     {
@@ -54,8 +56,8 @@ const data = {
       icon: LayoutDashboard,
     },
     {
-      title: "Agents",
-      url: "/admin/agents",
+      title: "Users",
+      url: "/admin/users",
       icon: Users,
     },
     {
@@ -70,7 +72,7 @@ const data = {
     },
     {
       title: "Playground",
-      url: "#",
+      url: "/admin/playground",
       icon: SquareTerminal,
       items: [
         {
@@ -88,7 +90,7 @@ const data = {
       ],
     },
     {
-      title: "Models",
+      title: "Agents",
       url: "#",
       icon: Bot,
       items: [

@@ -3,6 +3,7 @@ import { AdminBreadcrumb } from "@/components/admin-breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { PageHeader } from "@/components/page-header"
 import {
   SidebarInset,
   SidebarProvider,
@@ -62,12 +63,10 @@ export default function AgentsPage() {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight">AI Agents</h2>
-              <p className="text-muted-foreground">
-                Create and manage your AI agents for content generation
-              </p>
-            </div>
+            <PageHeader
+              heading="AI Agents"
+              description="Create and manage your AI agents for content generation"
+            />
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
               New Agent
