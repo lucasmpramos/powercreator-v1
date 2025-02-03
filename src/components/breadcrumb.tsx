@@ -9,14 +9,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-interface AdminBreadcrumbProps {
-  items: {
-    title: string
-    href?: string
-  }[]
+interface BreadcrumbNavProps {
+  items: Array<{ title: string; href?: string }>;
 }
 
-export function AdminBreadcrumb({ items }: AdminBreadcrumbProps) {
+export function BreadcrumbNav({ items }: BreadcrumbNavProps) {
   return (
     <Breadcrumb>
       <BreadcrumbList>

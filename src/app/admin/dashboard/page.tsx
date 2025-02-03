@@ -30,7 +30,10 @@ const recentContent: RecentContent[] = [
 
 export default function DashboardPage() {
   return (
-    <PageTemplate layout="fullLeft">
+    <PageTemplate 
+      layout="fullLeft"
+      breadcrumbItems={[{ title: "Dashboard" }]}
+    >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between mb-8">
           <PageHeader

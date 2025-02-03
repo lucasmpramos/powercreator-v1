@@ -5,18 +5,20 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AdminBreadcrumb } from "@/components/breadcrumb";
+import { BreadcrumbNav } from "@/components/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 
 interface PageTemplateProps {
   children: React.ReactNode;
   // layout type: "fullLeft" (left aligned, full width) or "centered" (centered content)
   layout?: "fullLeft" | "centered";
+  breadcrumbItems: Array<{ title: string; href?: string }>;
 }
 
 export default function PageTemplate({
   children,
   layout = "fullLeft",
+  breadcrumbItems,
 }: PageTemplateProps) {
   // If "centered", we can use a container class to center content.
   const containerClass =
@@ -30,7 +32,10 @@ export default function PageTemplate({
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
-            <AdminBreadcrumb items={[]} />
+            <BreadcrumbNav items={[
+              { title: "Platform", href: "#" },
+              ...breadcrumbItems
+            ]} />
           </div>
         </header>
         <div className={containerClass}>{children}</div>

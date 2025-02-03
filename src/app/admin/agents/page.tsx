@@ -38,8 +38,11 @@ const agents: Agent[] = [
 
 export default function AgentsPage() {
   return (
-    <PageTemplate layout="fullLeft">
-      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+    <PageTemplate
+      layout="fullLeft"
+      breadcrumbItems={[{ title: "Agents" }]}
+    >
+      <div className="flex flex-1 flex-col gap-4 p-0 pt-0">
         <div className="flex items-center justify-between mb-8">
           <PageHeader
             heading="AI Agents"
