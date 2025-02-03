@@ -1,0 +1,28 @@
+/* Styling for draggable elements */
+.draggable {
+  cursor: grab;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Styling for the element being dragged */
+.dragging {
+  opacity: 0.6;
+  transform: scale(1.05);
+}
+
+/* Highlight for potential drop zones */
+.dropzone {
+  border: 2px dashed #007BFF;
+  background-color: #f0f8ff;
+  transition: background-color 0.2s;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .builder-container {
+    padding: 1rem;
+  }
+  .dropzone {
+    border-width: 1.5px;
+  }
+} 
