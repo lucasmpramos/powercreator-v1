@@ -5,6 +5,7 @@ import FlowPage from "./app/admin/flow/page"
 import FormsPage from "./app/admin/forms/page"
 import AgentsPage from "./app/admin/agents/page"
 import PlaygroundPage from "./app/admin/playground/page"
+import FormBuilderPage from "./app/admin/form-builder/page"
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/admin/dashboard" element={<DashboardPage />} />
         <Route path="/admin/flow" element={<FlowPage />} />
         <Route path="/admin/forms" element={<FormsPage />} />
+        <Route path="/admin/form-builder" element={<FormBuilderPage />} />
         <Route path="/admin/agents" element={<AgentsPage />} />
         <Route path="/admin/playground" element={<PlaygroundPage />} />
       </Routes>

@@ -67,6 +67,11 @@ const data = {
     },
     {
       title: "Form Builder",
+      url: "/admin/form-builder",
+      icon: FormInput,
+    },
+    {
+      title: "Forms",
       url: "/admin/forms",
       icon: FormInput,
     },
