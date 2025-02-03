@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
+import Cookies from 'js-cookie'
 
 type Theme = "dark" | "light" | "system"
 
@@ -20,6 +21,8 @@ const initialState: ThemeProviderState = {
   setTheme: () => null,
 }
 
+const THEME_COOKIE_KEY = 'theme'
+
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
@@ -27,7 +30,11 @@ export function ThemeProvider({
   defaultTheme = "system",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  // Initialize theme from cookie or default
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return defaultTheme
+    return (Cookies.get(THEME_COOKIE_KEY) as Theme) || defaultTheme
+  })
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -51,11 +58,8 @@ export function ThemeProvider({
     theme,
     setTheme: (theme: Theme) => {
       setTheme(theme)
-      try {
-        localStorage.setItem("theme", theme)
-      } catch (e) {
-        // Ignore
-      }
+      // Set cookie with a 1 year expiry
+      Cookies.set(THEME_COOKIE_KEY, theme, { expires: 365 })
     },
   }
 

@@ -40,6 +40,8 @@ import {
   PanelTop,
   Text as TextIcon,
   CirclePlay as ButtonIcon,
+  Check,
+  X,
 } from 'lucide-react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { PropertiesPanel } from "@/components/properties-panel";
@@ -47,6 +49,7 @@ import { Field } from "@/types/form-builder";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import React from 'react';
 
 // Map of field types to their icons
 const iconMap: Record<string, LucideIcon> = {
@@ -234,13 +237,19 @@ interface EditableElementProps {
   defaultText: string;
   text?: string;
   onUpdate: (text: string) => void;
+  className?: string;
 }
 
-// Memoize the EditableElement component
-const EditableElement = memo(({ content, defaultText, text: initialText, onUpdate }: EditableElementProps) => {
+const EditableElement = memo(({ content, defaultText, text: initialText, onUpdate, className }: EditableElementProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(initialText || defaultText);
   const inputRef = useRef<HTMLInputElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Update local state when external text changes
+  useEffect(() => {
+    setText(initialText || defaultText);
+  }, [initialText, defaultText]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -249,39 +258,99 @@ const EditableElement = memo(({ content, defaultText, text: initialText, onUpdat
     }
   }, [isEditing]);
 
+  // Get the computed styles of the original element when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current && wrapperRef.current) {
+      const computedStyle = window.getComputedStyle(wrapperRef.current);
+      const inputElement = inputRef.current;
+      
+      // Apply the computed styles to the input
+      inputElement.style.fontSize = computedStyle.fontSize;
+      inputElement.style.fontWeight = computedStyle.fontWeight;
+      inputElement.style.fontFamily = computedStyle.fontFamily;
+      inputElement.style.lineHeight = computedStyle.lineHeight;
+      inputElement.style.letterSpacing = computedStyle.letterSpacing;
+      inputElement.style.textTransform = computedStyle.textTransform;
+    }
+  }, [isEditing]);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setText(e.target.value);
   }, []);
 
-  const handleBlur = useCallback(() => {
-    setIsEditing(false);
-    onUpdate(text);
-  }, [text, onUpdate]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleSave = useCallback(() => {
+    if (text.trim()) {
       setIsEditing(false);
       onUpdate(text);
     }
   }, [text, onUpdate]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Save on Cmd/Ctrl + Enter
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleSave();
+    }
+    // Cancel on Escape
+    if (e.key === 'Escape') {
+      setIsEditing(false);
+      setText(initialText || defaultText);
+    }
+  }, [handleSave, initialText, defaultText]);
+
   if (isEditing) {
     return (
-      <input
-        ref={inputRef}
-        type="text"
-        value={text}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={text}
+          onChange={handleChange}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          className={cn(
+            "w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-primary px-2 py-1",
+            className
+          )}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={handleSave}
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={() => {
+              setIsEditing(false);
+              setText(initialText || defaultText);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     );
   }
 
+  // Create a clone of the content with updated text
+  const contentWithUpdatedText = React.cloneElement(
+    content as React.ReactElement,
+    {},
+    text
+  );
+
   return (
-    <div onDoubleClick={() => setIsEditing(true)}>
-      {content}
+    <div 
+      ref={wrapperRef}
+      onDoubleClick={() => setIsEditing(true)}
+      className={className}
+    >
+      {contentWithUpdatedText}
     </div>
   );
 });
@@ -303,7 +372,6 @@ const styles = {
     base: "min-h-[100px] rounded-lg transition-all relative",
     empty: "border-2 border-dashed border-gray-200",
     active: "border-primary",
-    invalid: "!border-2 !border-red-500 !bg-red-100/50 !border-dashed",
     spacing: "space-y-8",
   },
   handle: {
@@ -333,10 +401,8 @@ const styles = {
     placeholder: "text-sm text-muted-foreground text-center p-4",
   },
   selected: "ring-2 ring-primary ring-offset-2 rounded-sm",
+  focused: "ring-1 ring-primary/50 ring-dashed rounded-sm",
 } as const;
-
-// Add isContainer helper
-const isContainer = (type: string) => ['dialog', 'card', 'panel'].includes(type);
 
 // Memoize the DroppableContainer component
 const DroppableContainer = memo(({
@@ -346,15 +412,13 @@ const DroppableContainer = memo(({
   onDrop,
   onDragLeave,
   showDropIndicator,
-  isInvalidDrop,
   className,
-}: DroppableContainerProps & { isInvalidDrop?: boolean }) => (
+}: DroppableContainerProps) => (
   <div 
     className={cn(
       styles.dropZone.base,
       isEmpty && styles.dropZone.empty,
-      showDropIndicator && isEmpty && !isInvalidDrop && styles.dropZone.active,
-      isInvalidDrop && styles.dropZone.invalid,
+      showDropIndicator && isEmpty && styles.dropZone.active,
       className
     )}
     onDragOver={onDragOver}
@@ -362,17 +426,11 @@ const DroppableContainer = memo(({
     onDragLeave={onDragLeave}
   >
     {isEmpty ? (
-      <div className={cn(
-        styles.text.placeholder,
-        isInvalidDrop && "text-red-500 font-medium"
-      )}>
-        {isInvalidDrop ? "Cannot drop container elements inside containers" : "Drop elements here"}
+      <div className={styles.text.placeholder}>
+        Drop elements here
       </div>
     ) : (
-      <div className={cn(
-        styles.dropZone.spacing,
-        isInvalidDrop && "opacity-50"
-      )}>
+      <div className={styles.dropZone.spacing}>
         {children}
       </div>
     )}
@@ -431,91 +489,119 @@ const HandleGroup = memo(({ type }: HandleGroupProps) => {
 });
 HandleGroup.displayName = 'HandleGroup';
 
-// Custom Node Types
-const FormFieldNode = memo(({ data }: { data: Field }) => {
-  const [childNodes, setChildNodes] = useState<Field[]>([]);
+// Add a constant for container types and its type
+const CONTAINER_TYPES = ['dialog', 'card', 'panel'] as const;
+type ContainerType = typeof CONTAINER_TYPES[number];
+
+// Move FormFieldNode outside
+const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolean }) => {
+  const [childNodes, setChildNodes] = useState<Field[]>(() => data.childNodes || []);
   const [dropTarget, setDropTarget] = useState<{ index: number; position: 'top' | 'bottom' } | null>(null);
   const [selectedChildIndex, setSelectedChildIndex] = useState<number | null>(null);
-  const [isInvalidDrop, setIsInvalidDrop] = useState(false);
+  const [focusedChildIndex, setFocusedChildIndex] = useState<number | null>(null);
   
+  // Sync childNodes with data.childNodes when it changes
+  useEffect(() => {
+    setChildNodes(data.childNodes || []);
+  }, [data.childNodes]);
+
+  // Update container click handler
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.target === e.currentTarget) {
+      setSelectedChildIndex(null);
+      setFocusedChildIndex(null);
+      data.onSelect?.();
+    }
+  }, [data.onSelect]);
+
+  // Update child click handler
+  const handleChildClick = useCallback((e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    setSelectedChildIndex(index);
+    setFocusedChildIndex(index);
+    data.onChildSelect?.(index);
+  }, [data.onChildSelect]);
+
+  // Add effect to handle document clicks for focus
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.form-builder-child')) {
+        setFocusedChildIndex(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentClick);
+    };
+  }, []);
+
   const onContainerDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
 
-    try {
-      const dragData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
-      // Check if trying to drop a container inside a container
-      if (isContainer(data.type) && isContainer(dragData.type)) {
-        event.dataTransfer.dropEffect = 'none';
-        setIsInvalidDrop(true);
+    const container = event.currentTarget as HTMLElement;
+    const containerRect = container.getBoundingClientRect();
+    const relativeY = event.clientY - containerRect.top;
+
+    if (childNodes.length === 0) {
+      setDropTarget({ index: 0, position: 'top' });
+      return;
+    }
+
+    const children = Array.from(container.getElementsByClassName('form-builder-child'));
+    
+    // If we're above the first element
+    const firstChild = children[0];
+    const firstChildRect = firstChild.getBoundingClientRect();
+    const firstChildTop = firstChildRect.top - containerRect.top;
+    if (relativeY < firstChildTop) {
+      setDropTarget({ index: 0, position: 'top' });
+      return;
+    }
+
+    // If we're below the last element
+    const lastChild = children[children.length - 1];
+    const lastChildRect = lastChild.getBoundingClientRect();
+    const lastChildBottom = lastChildRect.bottom - containerRect.top;
+    if (relativeY > lastChildBottom) {
+      setDropTarget({ index: children.length - 1, position: 'bottom' });
+      return;
+    }
+
+    // Check each element and the space between elements
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      const childRect = child.getBoundingClientRect();
+      const childTop = childRect.top - containerRect.top;
+      const childBottom = childRect.bottom - containerRect.top;
+      
+      // If we're directly over an element
+      if (relativeY >= childTop && relativeY <= childBottom) {
+        const midPoint = childTop + (childRect.height / 2);
+        setDropTarget({ 
+          index: i, 
+          position: relativeY < midPoint ? 'top' : 'bottom' 
+        });
         return;
       }
       
-      event.dataTransfer.dropEffect = 'move';
-      setIsInvalidDrop(false);
-
-      const container = event.currentTarget as HTMLElement;
-      const containerRect = container.getBoundingClientRect();
-      const relativeY = event.clientY - containerRect.top;
-
-      if (childNodes.length === 0) {
-        setDropTarget({ index: 0, position: 'top' });
-        return;
-      }
-
-      const children = Array.from(container.getElementsByClassName('form-builder-child'));
-      
-      // If we're above the first element
-      const firstChild = children[0];
-      const firstChildRect = firstChild.getBoundingClientRect();
-      const firstChildTop = firstChildRect.top - containerRect.top;
-      if (relativeY < firstChildTop) {
-        setDropTarget({ index: 0, position: 'top' });
-        return;
-      }
-
-      // If we're below the last element
-      const lastChild = children[children.length - 1];
-      const lastChildRect = lastChild.getBoundingClientRect();
-      const lastChildBottom = lastChildRect.bottom - containerRect.top;
-      if (relativeY > lastChildBottom) {
-        setDropTarget({ index: children.length - 1, position: 'bottom' });
-        return;
-      }
-
-      // Check each element and the space between elements
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        const childRect = child.getBoundingClientRect();
-        const childTop = childRect.top - containerRect.top;
-        const childBottom = childRect.bottom - containerRect.top;
+      // If we're between this element and the next one
+      if (i < children.length - 1) {
+        const nextChild = children[i + 1];
+        const nextChildRect = nextChild.getBoundingClientRect();
+        const nextChildTop = nextChildRect.top - containerRect.top;
         
-        // If we're directly over an element
-        if (relativeY >= childTop && relativeY <= childBottom) {
-          const midPoint = childTop + (childRect.height / 2);
-          setDropTarget({ 
-            index: i, 
-            position: relativeY < midPoint ? 'top' : 'bottom' 
-          });
+        if (relativeY > childBottom && relativeY < nextChildTop) {
+          setDropTarget({ index: i, position: 'bottom' });
           return;
         }
-        
-        // If we're between this element and the next one
-        if (i < children.length - 1) {
-          const nextChild = children[i + 1];
-          const nextChildRect = nextChild.getBoundingClientRect();
-          const nextChildTop = nextChildRect.top - containerRect.top;
-          
-          if (relativeY > childBottom && relativeY < nextChildTop) {
-            setDropTarget({ index: i, position: 'bottom' });
-            return;
-          }
-        }
       }
-    } catch (error) {
-      console.error('Failed to parse drag data:', error);
     }
-  }, [childNodes.length, data.type]);
+  }, [childNodes.length]);
 
   const onDropToContainer = useCallback((event: React.DragEvent) => {
     event.stopPropagation();
@@ -524,30 +610,33 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
     try {
       const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
       
-      // Prevent dropping containers inside containers
-      if (isContainer(data.type) && isContainer(fieldData.type)) {
-        setIsInvalidDrop(false);
+      if (CONTAINER_TYPES.includes(data.type as ContainerType) && CONTAINER_TYPES.includes(fieldData.type as ContainerType)) {
+        console.warn('Cannot nest containers inside each other');
         return;
       }
 
-      const newNode = { ...fieldData, icon: iconMap[fieldData.type] };
+      const newNode = {
+        ...fieldData,
+        icon: iconMap[fieldData.type],
+        properties: fieldData.properties || {},
+      };
       
-      setChildNodes(prev => {
-        if (dropTarget) {
-          const newNodes = [...prev];
-          const insertIndex = dropTarget.position === 'bottom' ? dropTarget.index + 1 : dropTarget.index;
-          newNodes.splice(insertIndex, 0, newNode);
-          return newNodes;
-        }
-        return [...prev, newNode];
-      });
-      
+      const updatedNodes = [...childNodes];
+      if (dropTarget) {
+        const insertIndex = dropTarget.position === 'bottom' ? dropTarget.index + 1 : dropTarget.index;
+        updatedNodes.splice(insertIndex, 0, newNode);
+      } else {
+        updatedNodes.push(newNode);
+      }
+
+      // Update both local state and parent's data
+      setChildNodes(updatedNodes);
+      data.onChildNodesChange?.(updatedNodes);
       setDropTarget(null);
-      setIsInvalidDrop(false);
     } catch (error) {
       console.error('Failed to parse dropped data:', error);
     }
-  }, [dropTarget, data.type]);
+  }, [dropTarget, data.type, data.onChildNodesChange, childNodes]);
 
   const wrapWithHandles = useCallback((content: React.ReactNode, type: string) => (
     <div className="relative group">
@@ -556,11 +645,12 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
     </div>
   ), []);
 
-  const renderEditableContent = useCallback((content: React.ReactNode, defaultText: string, field: Field) => (
+  const renderEditableContent = useCallback((content: React.ReactNode, defaultText: string, field: Field, className?: string) => (
     <EditableElement
       content={content}
       defaultText={defaultText}
       text={field.properties.text}
+      className={className}
       onUpdate={(newText) => {
         if (selectedChildIndex !== null) {
           data.onChildUpdate?.(selectedChildIndex, {
@@ -580,7 +670,6 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
       const relatedTarget = e.relatedTarget as HTMLElement | null;
       if (!relatedTarget || !container.contains(relatedTarget)) {
         setDropTarget(null);
-        setIsInvalidDrop(false);
       }
     }
   }), [onContainerDragOver, onDropToContainer]);
@@ -588,11 +677,15 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
   // Memoize preview components map
   const previewComponents = useMemo(() => ({
     dialog: (field) => wrapWithHandles(
-      <div className={styles.container.dialog}>
+      <div 
+        className={cn(
+          styles.container.dialog,
+          selected && styles.selected
+        )}
+      >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
           showDropIndicator={!!dropTarget}
-          isInvalidDrop={isInvalidDrop}
           {...commonDropHandlers}
         >
           {renderChildren()}
@@ -601,11 +694,15 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
     , 'dialog'),
 
     card: (field) => wrapWithHandles(
-      <Card className={styles.container.card}>
+      <Card 
+        className={cn(
+          styles.container.card,
+          selected && styles.selected
+        )}
+      >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
           showDropIndicator={!!dropTarget}
-          isInvalidDrop={isInvalidDrop}
           {...commonDropHandlers}
         >
           {renderChildren()}
@@ -614,11 +711,15 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
     , 'card'),
 
     panel: (field) => wrapWithHandles(
-      <div className={styles.container.panel}>
+      <div 
+        className={cn(
+          styles.container.panel,
+          selected && styles.selected
+        )}
+      >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
           showDropIndicator={!!dropTarget}
-          isInvalidDrop={isInvalidDrop}
           {...commonDropHandlers}
         >
           {renderChildren()}
@@ -631,7 +732,8 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
         {field.properties.text || 'Heading 1'}
       </h1>,
       'Heading 1',
-      field
+      field,
+      styles.heading.h1
     ),
 
     h2: (field) => renderEditableContent(
@@ -639,7 +741,8 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
         {field.properties.text || 'Heading 2'}
       </h2>,
       'Heading 2',
-      field
+      field,
+      styles.heading.h2
     ),
 
     h3: (field) => renderEditableContent(
@@ -647,26 +750,31 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
         {field.properties.text || 'Heading 3'}
       </h3>,
       'Heading 3',
-      field
+      field,
+      styles.heading.h3
     ),
 
-    text: (field) => renderEditableContent(
-      <Input 
-        type="text" 
-        placeholder={field.properties.placeholder || "Enter text..."} 
-        className={styles.input.base}
-      />,
-      'Enter text...',
-      field
+    text: (field) => (
+      <div className="grid w-full max-w-sm items-center gap-1.5">
+        <Label>{field.properties.label || 'Text Input'}</Label>
+        <Input 
+          type="text" 
+          placeholder={field.properties.placeholder || "Enter text..."} 
+          className={styles.input.base}
+          disabled
+        />
+      </div>
     ),
 
-    textarea: (field) => renderEditableContent(
-      <textarea 
-        className={styles.input.textarea}
-        placeholder={field.properties.placeholder || "Enter text..."} 
-      />,
-      'Enter text...',
-      field
+    textarea: (field) => (
+      <div className="grid w-full max-w-sm items-center gap-1.5">
+        <Label>{field.properties.label || 'Text Area'}</Label>
+        <textarea 
+          className={styles.input.textarea}
+          placeholder={field.properties.placeholder || "Enter text..."} 
+          disabled
+        />
+      </div>
     ),
 
     paragraph: (field) => renderEditableContent(
@@ -674,7 +782,8 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
         {field.properties.text || 'Enter your text here'}
       </p>,
       'Enter your text here',
-      field
+      field,
+      styles.text.paragraph
     ),
 
     button: (field) => renderEditableContent(
@@ -684,7 +793,7 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
       'Button',
       field
     ),
-  }), [childNodes, dropTarget, isInvalidDrop, commonDropHandlers, wrapWithHandles, renderEditableContent]);
+  }), [childNodes, dropTarget, commonDropHandlers, wrapWithHandles, renderEditableContent, selected]);
 
   const renderPreview = useCallback((field: Field, isChild: boolean = false) => {
     const previewComponent = previewComponents[field.type];
@@ -714,13 +823,10 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
             <div 
               className={cn(
                 "form-builder-child relative transition-all",
-                selectedChildIndex === index && styles.selected
+                selectedChildIndex === index && styles.selected,
+                focusedChildIndex === index && styles.focused
               )}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedChildIndex(index);
-                data.onChildSelect?.(index);
-              }}
+              onClick={(e) => handleChildClick(e, index)}
             >
               {renderPreview({ ...child, icon: iconMap[child.type] }, true)}
             </div>
@@ -731,25 +837,29 @@ const FormFieldNode = memo(({ data }: { data: Field }) => {
         ))}
       </div>
     );
-  }, [childNodes, dropTarget, selectedChildIndex, data.onChildSelect, renderPreview]);
+  }, [childNodes, dropTarget, selectedChildIndex, focusedChildIndex, handleChildClick, renderPreview]);
 
   return (
-    <div className="relative group">
+    <div 
+      className="relative group form-builder-container" 
+      onClick={handleContainerClick}
+    >
       {renderPreview(data, false)}
     </div>
   );
 });
 FormFieldNode.displayName = 'FormFieldNode';
 
-const nodeTypes: NodeTypes = {
-  formField: FormFieldNode,
-};
-
 export function VisualFormBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedChild, setSelectedChild] = useState<{ nodeId: string; childIndex: number } | null>(null);
+
+  // Memoize nodeTypes
+  const nodeTypes = useMemo(() => ({
+    formField: FormFieldNode,
+  }), []);
 
   // Memoize callbacks
   const onConnect = useCallback(
@@ -792,11 +902,21 @@ export function VisualFormBuilder() {
         type: 'formField',
         position,
         data: {
-          ...fieldData,
+          type: fieldData.type,
+          label: fieldData.label,
           icon: iconMap[fieldData.type],
+          properties: fieldData.properties || {},
           childNodes: [], // Initialize empty childNodes array
-          onChildSelect: (childIndex: number) => {
-            setSelectedChild({ nodeId: newNode.id, childIndex });
+          onSelect: () => {
+            setSelectedNode(newNode);
+            setSelectedChild(null);
+          },
+          onChildSelect: (childIndex: number | null) => {
+            if (childIndex === null) {
+              setSelectedChild(null);
+            } else {
+              setSelectedChild({ nodeId: newNode.id, childIndex });
+            }
             setSelectedNode(null);
           },
           onChildUpdate: (childIndex: number, updates: Partial<Field>) => {
@@ -816,6 +936,21 @@ export function VisualFormBuilder() {
               )
             );
           },
+          onChildNodesChange: (nodes: Field[]) => {
+            setNodes((nds) =>
+              nds.map((node) =>
+                node.id === newNode.id
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        childNodes: nodes,
+                      },
+                    }
+                  : node
+              )
+            );
+          },
         },
       };
 
@@ -825,7 +960,14 @@ export function VisualFormBuilder() {
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    event.stopPropagation();
     setSelectedNode(node);
+    setSelectedChild(null);
+  }, []);
+
+  // Add click handler for the ReactFlow background
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
     setSelectedChild(null);
   }, []);
 
@@ -833,10 +975,26 @@ export function VisualFormBuilder() {
     if (selectedChild && selectedNode) {
       const node = nodes.find(n => n.id === selectedChild.nodeId);
       if (node && node.data.childNodes) {
-        return node.data.childNodes[selectedChild.childIndex];
+        const childField = node.data.childNodes[selectedChild.childIndex];
+        return {
+          id: childField.id || `child-${selectedChild.childIndex}`,
+          type: childField.type,
+          label: childField.label,
+          icon: childField.icon,
+          properties: childField.properties || {},
+        };
       }
     }
-    return selectedNode?.data;
+    if (selectedNode) {
+      return {
+        id: selectedNode.id,
+        type: selectedNode.data.type,
+        label: selectedNode.data.label,
+        icon: selectedNode.data.icon,
+        properties: selectedNode.data.properties || {},
+      };
+    }
+    return null;
   }, [selectedNode, selectedChild, nodes]);
 
   const onFieldUpdate = useCallback((updates: Partial<Field>) => {
@@ -849,7 +1007,9 @@ export function VisualFormBuilder() {
                 data: {
                   ...node.data,
                   childNodes: node.data.childNodes.map((child: Field, idx: number) =>
-                    idx === selectedChild.childIndex ? { ...child, ...updates } : child
+                    idx === selectedChild.childIndex
+                      ? { ...child, ...updates }
+                      : child
                   ),
                 },
               }
@@ -860,7 +1020,13 @@ export function VisualFormBuilder() {
       setNodes((nds) =>
         nds.map((node) =>
           node.id === selectedNode.id
-            ? { ...node, data: { ...node.data, ...updates } }
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  ...updates,
+                },
+              }
             : node
         )
       );
@@ -922,6 +1088,7 @@ export function VisualFormBuilder() {
             onDrop={onDrop}
             onDragOver={onDragOver}
             onNodeClick={onNodeClick}
+            onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             className={cn(
               "bg-background rounded-md",

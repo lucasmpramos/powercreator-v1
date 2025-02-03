@@ -7,8 +7,11 @@ export interface Field {
   label: string;
   icon: LucideIcon;
   preview?: ReactNode;
-  onChildSelect?: (index: number) => void;
+  onSelect?: () => void;
+  onChildSelect?: (index: number | null) => void;
   onChildUpdate?: (index: number, updates: Partial<Field>) => void;
+  onChildNodesChange?: (nodes: Field[]) => void;
+  childNodes?: Field[];
   properties: {
     placeholder?: string;
     helpText?: string;
