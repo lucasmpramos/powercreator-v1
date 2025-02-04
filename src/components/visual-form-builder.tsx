@@ -50,6 +50,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 // Map of field types to their icons
 const iconMap: Record<string, LucideIcon> = {
@@ -497,29 +499,25 @@ type ContainerType = typeof CONTAINER_TYPES[number];
 const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolean }) => {
   const [childNodes, setChildNodes] = useState<Field[]>(() => data.childNodes || []);
   const [dropTarget, setDropTarget] = useState<{ index: number; position: 'top' | 'bottom' } | null>(null);
-  const [selectedChildIndex, setSelectedChildIndex] = useState<number | null>(null);
-  const [focusedChildIndex, setFocusedChildIndex] = useState<number | null>(null);
   
-  // Sync childNodes with data.childNodes when it changes
   useEffect(() => {
     setChildNodes(data.childNodes || []);
   }, [data.childNodes]);
 
-  // Update container click handler
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (e.target === e.currentTarget) {
-      setSelectedChildIndex(null);
-      setFocusedChildIndex(null);
-      data.onSelect?.();
+    // Don't stop propagation - let the click reach ReactFlow's handler
+    // Only prevent default to avoid any unwanted behavior
+    e.preventDefault();
+    
+    // Only handle clicks directly on the container, not its children
+    if (e.target === e.currentTarget || (e.currentTarget as HTMLElement).contains(e.target as HTMLElement)) {
+      // Let the click event bubble up to ReactFlow
+      return;
     }
-  }, [data.onSelect]);
+  }, []);
 
-  // Update child click handler
   const handleChildClick = useCallback((e: React.MouseEvent, index: number) => {
     e.stopPropagation();
-    setSelectedChildIndex(index);
-    setFocusedChildIndex(index);
     data.onChildSelect?.(index);
   }, [data.onChildSelect]);
 
@@ -528,7 +526,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
     const handleDocumentClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest('.form-builder-child')) {
-        setFocusedChildIndex(null);
+        setDropTarget(null);
       }
     };
 
@@ -616,9 +614,18 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       }
 
       const newNode = {
-        ...fieldData,
+        id: `${fieldData.type}-${Math.random()}`,
+        type: fieldData.type,
+        label: fieldData.label,
         icon: iconMap[fieldData.type],
-        properties: fieldData.properties || {},
+        properties: {
+          ...fieldData.properties,
+          title: fieldData.label,
+          text: fieldData.label,
+          width: 'full',
+          padding: 'medium',
+          margin: 'medium',
+        },
       };
       
       const updatedNodes = [...childNodes];
@@ -652,14 +659,14 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       text={field.properties.text}
       className={className}
       onUpdate={(newText) => {
-        if (selectedChildIndex !== null) {
-          data.onChildUpdate?.(selectedChildIndex, {
+        if (dropTarget) {
+          data.onChildUpdate?.(dropTarget.index, {
             properties: { ...field.properties, text: newText }
           });
         }
       }}
     />
-  ), [selectedChildIndex, data.onChildUpdate]);
+  ), [dropTarget, data.onChildUpdate]);
 
   // Memoize common handlers
   const commonDropHandlers = useMemo(() => ({
@@ -680,8 +687,10 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       <div 
         className={cn(
           styles.container.dialog,
-          selected && styles.selected
+          "cursor-pointer relative"
         )}
+        data-node-id={data.id}
+        data-node-type="dialog"
       >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
@@ -697,8 +706,10 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       <Card 
         className={cn(
           styles.container.card,
-          selected && styles.selected
+          "cursor-pointer relative"
         )}
+        data-node-id={data.id}
+        data-node-type="card"
       >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
@@ -714,8 +725,10 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       <div 
         className={cn(
           styles.container.panel,
-          selected && styles.selected
+          "cursor-pointer relative"
         )}
+        data-node-id={data.id}
+        data-node-type="panel"
       >
         <DroppableContainer
           isEmpty={childNodes.length === 0}
@@ -793,7 +806,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       'Button',
       field
     ),
-  }), [childNodes, dropTarget, commonDropHandlers, wrapWithHandles, renderEditableContent, selected]);
+  }), [childNodes, dropTarget, commonDropHandlers, wrapWithHandles, renderEditableContent, handleContainerClick]);
 
   const renderPreview = useCallback((field: Field, isChild: boolean = false) => {
     const previewComponent = previewComponents[field.type];
@@ -823,8 +836,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
             <div 
               className={cn(
                 "form-builder-child relative transition-all",
-                selectedChildIndex === index && styles.selected,
-                focusedChildIndex === index && styles.focused
+                dropTarget?.index === index && styles.focused
               )}
               onClick={(e) => handleChildClick(e, index)}
             >
@@ -837,12 +849,14 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         ))}
       </div>
     );
-  }, [childNodes, dropTarget, selectedChildIndex, focusedChildIndex, handleChildClick, renderPreview]);
+  }, [childNodes, dropTarget, handleChildClick, renderPreview]);
 
   return (
     <div 
-      className="relative group form-builder-container" 
-      onClick={handleContainerClick}
+      className={cn(
+        "relative group form-builder-container",
+        selected && "ring-2 ring-primary ring-offset-2"
+      )}
     >
       {renderPreview(data, false)}
     </div>
@@ -856,18 +870,13 @@ export function VisualFormBuilder() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [selectedChild, setSelectedChild] = useState<{ nodeId: string; childIndex: number } | null>(null);
 
-  // Memoize nodeTypes
   const nodeTypes = useMemo(() => ({
     formField: FormFieldNode,
   }), []);
 
-  // Memoize callbacks
-  const onConnect = useCallback(
-    (params: Connection | Edge) => {
-      setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds));
-    },
-    [setEdges],
-  );
+  const onConnect = useCallback((params: Connection | Edge) => {
+    setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds));
+  }, [setEdges]);
 
   const onDragStart = useCallback((event: React.DragEvent, field: Field) => {
     const fieldData = {
@@ -883,108 +892,113 @@ export function VisualFormBuilder() {
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-
-      const reactFlowBounds = document.querySelector('.react-flow-wrapper')?.getBoundingClientRect();
-      const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
-
-      if (!reactFlowBounds) return;
-
-      const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
-      };
-
-      const newNode = {
-        id: `${fieldData.type}-${Math.random()}`,
-        type: 'formField',
-        position,
-        data: {
-          type: fieldData.type,
-          label: fieldData.label,
-          icon: iconMap[fieldData.type],
-          properties: fieldData.properties || {},
-          childNodes: [], // Initialize empty childNodes array
-          onSelect: () => {
-            setSelectedNode(newNode);
-            setSelectedChild(null);
-          },
-          onChildSelect: (childIndex: number | null) => {
-            if (childIndex === null) {
-              setSelectedChild(null);
-            } else {
-              setSelectedChild({ nodeId: newNode.id, childIndex });
-            }
-            setSelectedNode(null);
-          },
-          onChildUpdate: (childIndex: number, updates: Partial<Field>) => {
-            setNodes((nds) =>
-              nds.map((node) =>
-                node.id === newNode.id
-                  ? {
-                      ...node,
-                      data: {
-                        ...node.data,
-                        childNodes: (node.data.childNodes || []).map((child: Field, idx: number) =>
-                          idx === childIndex ? { ...child, ...updates } : child
-                        ),
-                      },
-                    }
-                  : node
-              )
-            );
-          },
-          onChildNodesChange: (nodes: Field[]) => {
-            setNodes((nds) =>
-              nds.map((node) =>
-                node.id === newNode.id
-                  ? {
-                      ...node,
-                      data: {
-                        ...node.data,
-                        childNodes: nodes,
-                      },
-                    }
-                  : node
-              )
-            );
-          },
-        },
-      };
-
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [setNodes]
-  );
-
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     event.stopPropagation();
     setSelectedNode(node);
     setSelectedChild(null);
   }, []);
 
-  // Add click handler for the ReactFlow background
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+
+    const reactFlowBounds = document.querySelector('.react-flow-wrapper')?.getBoundingClientRect();
+    const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+
+    if (!reactFlowBounds) return;
+
+    const position = {
+      x: event.clientX - reactFlowBounds.left,
+      y: event.clientY - reactFlowBounds.top,
+    };
+
+    const nodeId = `${fieldData.type}-${Date.now()}`;
+    const isContainer = CONTAINER_TYPES.includes(fieldData.type);
+
+    const newNode = {
+      id: nodeId,
+      type: 'formField',
+      position,
+      data: {
+        id: nodeId,
+        type: fieldData.type,
+        label: fieldData.label,
+        icon: iconMap[fieldData.type],
+        properties: {
+          ...fieldData.properties,
+          title: fieldData.label,
+          text: fieldData.label,
+          width: 'full',
+          padding: isContainer ? 'large' : 'medium',
+          margin: isContainer ? 'large' : 'medium',
+          variant: isContainer ? 'default' : undefined,
+          layout: isContainer ? 'vertical' : undefined,
+        },
+        childNodes: [],
+        onSelect: () => {
+          setSelectedNode(nodes.find(n => n.id === nodeId) || null);
+          setSelectedChild(null);
+        },
+        onChildSelect: (childIndex: number) => {
+          setSelectedChild({ nodeId, childIndex });
+          setSelectedNode(null);
+        },
+        onChildUpdate: (childIndex: number, updates: Partial<Field>) => {
+          setNodes(nds => nds.map(node => 
+            node.id === nodeId 
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    childNodes: node.data.childNodes.map((child: Field, idx: number) =>
+                      idx === childIndex ? { ...child, ...updates } : child
+                    ),
+                  },
+                }
+              : node
+          ));
+        },
+        onChildNodesChange: (updatedChildNodes: Field[]) => {
+          setNodes(nds => nds.map(node =>
+            node.id === nodeId
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    childNodes: updatedChildNodes,
+                  },
+                }
+              : node
+          ));
+        },
+      },
+    };
+
+    setNodes(nds => nds.concat(newNode));
+    setSelectedNode(newNode);
+  }, [nodes]);
+
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
     setSelectedChild(null);
   }, []);
 
   const getSelectedField = useCallback(() => {
-    if (selectedChild && selectedNode) {
-      const node = nodes.find(n => n.id === selectedChild.nodeId);
-      if (node && node.data.childNodes) {
-        const childField = node.data.childNodes[selectedChild.childIndex];
+    if (!selectedNode && !selectedChild) return null;
+
+    if (selectedChild) {
+      const parentNode = nodes.find(n => n.id === selectedChild.nodeId);
+      const childNode = parentNode?.data?.childNodes?.[selectedChild.childIndex];
+      if (childNode) {
         return {
-          id: childField.id || `child-${selectedChild.childIndex}`,
-          type: childField.type,
-          label: childField.label,
-          icon: childField.icon,
-          properties: childField.properties || {},
+          id: `${parentNode.id}-child-${selectedChild.childIndex}`,
+          type: childNode.type,
+          label: childNode.label,
+          icon: childNode.icon,
+          properties: childNode.properties || {},
         };
       }
     }
+    
     if (selectedNode) {
       return {
         id: selectedNode.id,
@@ -994,44 +1008,44 @@ export function VisualFormBuilder() {
         properties: selectedNode.data.properties || {},
       };
     }
+    
     return null;
   }, [selectedNode, selectedChild, nodes]);
 
   const onFieldUpdate = useCallback((updates: Partial<Field>) => {
     if (selectedChild) {
-      setNodes((nds) =>
-        nds.map((node) =>
-          node.id === selectedChild.nodeId
-            ? {
-                ...node,
-                data: {
-                  ...node.data,
-                  childNodes: node.data.childNodes.map((child: Field, idx: number) =>
-                    idx === selectedChild.childIndex
-                      ? { ...child, ...updates }
-                      : child
-                  ),
-                },
-              }
-            : node
-        )
-      );
+      const nodeId = selectedChild.nodeId;
+      const childIndex = selectedChild.childIndex;
+      
+      setNodes(nds => nds.map(node => 
+        node.id === nodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                childNodes: node.data.childNodes.map((child: Field, idx: number) =>
+                  idx === childIndex
+                    ? { ...child, ...updates }
+                    : child
+                ),
+              },
+            }
+          : node
+      ));
     } else if (selectedNode) {
-      setNodes((nds) =>
-        nds.map((node) =>
-          node.id === selectedNode.id
-            ? {
-                ...node,
-                data: {
-                  ...node.data,
-                  ...updates,
-                },
-              }
-            : node
-        )
-      );
+      setNodes(nds => nds.map(node =>
+        node.id === selectedNode.id
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                ...updates,
+              },
+            }
+          : node
+      ));
     }
-  }, [selectedNode, selectedChild, setNodes]);
+  }, [selectedNode, selectedChild]);
 
   // Memoize field categories rendering
   const renderFieldCategories = useMemo(() => (
@@ -1061,6 +1075,51 @@ export function VisualFormBuilder() {
       </div>
     ))
   ), [onDragStart]);
+
+  // Update the DebugPanel to use memoized values
+  const DebugPanel = memo(() => {
+    const [isOpen, setIsOpen] = useState(true);
+    const selectedField = getSelectedField();
+    
+    return (
+      <Collapsible
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        className="mt-4 border rounded-md"
+      >
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-between p-2 font-medium"
+          >
+            Debug Information
+            <ChevronDown className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              isOpen && "transform rotate-180"
+            )} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t">
+          <ScrollArea className="h-[200px]">
+            <div className="p-2">
+              <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                <code>
+                  {JSON.stringify({
+                    selectedNodeId: selectedNode?.id,
+                    selectedChildId: selectedChild?.nodeId,
+                    selectedChildIndex: selectedChild?.childIndex,
+                    field: selectedField
+                  }, null, 2)}
+                </code>
+              </pre>
+            </div>
+          </ScrollArea>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  });
+  DebugPanel.displayName = 'DebugPanel';
 
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full rounded-lg border">
@@ -1115,9 +1174,10 @@ export function VisualFormBuilder() {
           <ScrollArea className="h-full">
             <div className="p-4">
               <PropertiesPanel 
-                field={getSelectedField()} 
+                field={getSelectedField()}
                 onUpdate={onFieldUpdate}
               />
+              <DebugPanel />
             </div>
           </ScrollArea>
         </Card>
