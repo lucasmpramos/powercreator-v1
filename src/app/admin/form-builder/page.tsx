@@ -14,7 +14,6 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import PageTemplate from "@/components/page-template";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -207,18 +206,27 @@ const FormBuilderContent = () => {
 
   const handleDragStart = (event: { active: { id: string } }) => {
     const { active } = event;
-    const activeFieldTemplate = fieldCategories
-      .flatMap(category => category.fields)
-      .find(field => field.id === active.id);
+    const allFields: Field[] = fieldCategories.reduce<Field[]>((acc, category) => {
+      return [...acc, ...category.fields.map((field): Field => ({
+        ...field,
+        properties: field.properties || {}
+      }))];
+    }, []);
+    
+    const activeFieldTemplate = allFields.find((field) => field.id === active.id);
     
     if (activeFieldTemplate) {
-      setActiveField({
+      const newField: Field = {
         ...activeFieldTemplate,
         id: `temp-${generateId()}`,
-      });
+        properties: {
+          ...activeFieldTemplate.properties
+        }
+      };
+      setActiveField(newField);
     } else {
       const activeField = steps[currentStepIndex].fields.find(
-        field => field.id === active.id
+        (field) => field.id === active.id
       );
       if (activeField) {
         setActiveField(activeField);
@@ -226,7 +234,7 @@ const FormBuilderContent = () => {
     }
   };
 
-  const handleDragEnd = (event: { active: { id: string }, over: { id: string } | null }) => {
+  const handleDragEnd = (event: { active: { id: string }; over: { id: string } | null }) => {
     const { active, over } = event;
 
     if (!over) return;
@@ -234,11 +242,11 @@ const FormBuilderContent = () => {
     // Handle dropping new fields from the sidebar
     if (active.id.startsWith('field-')) {
       const fieldTemplate = fieldCategories
-        .flatMap(category => category.fields)
-        .find(field => field.id === active.id);
+        .flatMap((category: FieldCategory) => category.fields as Field[])
+        .find((field: Field) => field.id === active.id);
 
       if (fieldTemplate) {
-        const newField = {
+        const newField: Field = {
           ...fieldTemplate,
           id: generateId(),
           properties: {
@@ -251,9 +259,9 @@ const FormBuilderContent = () => {
               { label: 'Option 2', value: 'option2' }
             ] : undefined
           }
-        } as Field;
+        };
 
-        setSteps(prevSteps => {
+        setSteps((prevSteps: Step[]): Step[] => {
           const newSteps = [...prevSteps];
           const currentFields = [...newSteps[currentStepIndex].fields];
           
@@ -263,7 +271,7 @@ const FormBuilderContent = () => {
             currentFields.push(newField);
           } else if (over.id.endsWith('-drop')) {
             const targetId = over.id.replace('-drop', '');
-            const targetIndex = currentFields.findIndex(f => f.id === targetId);
+            const targetIndex = currentFields.findIndex((f: Field) => f.id === targetId);
             if (targetIndex !== -1) {
               currentFields.splice(targetIndex + 1, 0, newField);
             } else {
@@ -278,15 +286,15 @@ const FormBuilderContent = () => {
     }
     // Handle reordering existing fields
     else if (!active.id.startsWith('field-')) {
-      setSteps(prevSteps => {
+      setSteps((prevSteps: Step[]): Step[] => {
         const newSteps = [...prevSteps];
         const currentFields = [...newSteps[currentStepIndex].fields];
-        const activeField = currentFields.find(f => f.id === active.id);
+        const activeField = currentFields.find((f: Field) => f.id === active.id);
         
         if (!activeField) return prevSteps;
 
         // Remove the field from its current position
-        const oldIndex = currentFields.findIndex(f => f.id === active.id);
+        const oldIndex = currentFields.findIndex((f: Field) => f.id === active.id);
         currentFields.splice(oldIndex, 1);
 
         // Insert the field at its new position
@@ -296,7 +304,7 @@ const FormBuilderContent = () => {
           currentFields.push(activeField);
         } else if (over.id.endsWith('-drop')) {
           const targetId = over.id.replace('-drop', '');
-          const targetIndex = currentFields.findIndex(f => f.id === targetId);
+          const targetIndex = currentFields.findIndex((f: Field) => f.id === targetId);
           if (targetIndex !== -1) {
             currentFields.splice(targetIndex + 1, 0, activeField);
           } else {
@@ -304,7 +312,7 @@ const FormBuilderContent = () => {
           }
         } else {
           // If dropping directly on a field
-          const targetIndex = currentFields.findIndex(f => f.id === over.id);
+          const targetIndex = currentFields.findIndex((f: Field) => f.id === over.id);
           if (targetIndex !== -1) {
             currentFields.splice(targetIndex, 0, activeField);
           } else {
@@ -575,6 +583,8 @@ const FormBuilderContent = () => {
     </div>
   );
 };
+
+export default FormBuilderContent;
 
 // Form Preview Component
 const FormPreview = ({ steps }: { steps: Step[] }) => {
@@ -1053,7 +1063,7 @@ const SortableFieldItem = ({
   onDelete: (fieldId: string) => void;
   isSelected: boolean;
 }) => {
-  const sortableReturn = useSortable({
+  const sortable = useSortable({
     id: field.id,
     data: {
       type: 'form-field',
@@ -1071,7 +1081,7 @@ const SortableFieldItem = ({
     transform,
     transition,
     isDragging,
-  } = sortableReturn;
+  } = sortable;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1505,7 +1515,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Group Name</Label>
                 <Input
-                  value={field.properties.group || ''}
+                  value={field.properties.group ?? ''}
                   onChange={(e) => 
                     onUpdate({
                       properties: { ...field.properties, group: e.target.value }
@@ -1569,12 +1579,12 @@ const PropertiesPanel = ({
               {(field.type === 'select' || field.type === 'radio') && (
                 <div className="space-y-2">
                   <Label>Options</Label>
-                  {field.properties.options?.map((option, index) => (
+                  {(field.properties.options ?? []).map((option, index) => (
                     <div key={index} className="flex gap-2">
                       <Input
                         value={option.label}
                         onChange={(e) => {
-                          const newOptions = [...(field.properties.options || [])];
+                          const newOptions = [...(field.properties.options ?? [])];
                           newOptions[index] = { ...option, label: e.target.value };
                           onUpdate({ 
                             properties: { ...field.properties, options: newOptions } 
@@ -1596,121 +1606,8 @@ const PropertiesPanel = ({
                       </Button>
                     </div>
                   ))}
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const newOptions = [...(field.properties.options || [])];
-                      newOptions.push({ 
-                        label: `Option ${newOptions.length + 1}`, 
-                        value: `option${newOptions.length + 1}` 
-                      });
-                      onUpdate({ 
-                        properties: { ...field.properties, options: newOptions } 
-                      });
-                    }}
-                  >
-                    Add Option
-                  </Button>
                 </div>
               )}
-
-              {(field.type === 'text' || field.type === 'textarea') && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Minimum Length</Label>
-                    <Input
-                      type="number"
-                      value={field.properties.minLength || ''}
-                      onChange={(e) => 
-                        onUpdate({ 
-                          properties: { 
-                            ...field.properties, 
-                            minLength: parseInt(e.target.value) || undefined 
-                          } 
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Maximum Length</Label>
-                    <Input
-                      type="number"
-                      value={field.properties.maxLength || ''}
-                      onChange={(e) => 
-                        onUpdate({ 
-                          properties: { 
-                            ...field.properties, 
-                            maxLength: parseInt(e.target.value) || undefined 
-                          } 
-                        })
-                      }
-                    />
-                  </div>
-                </>
-              )}
-
-              {field.type === 'number' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Minimum Value</Label>
-                    <Input
-                      type="number"
-                      value={field.properties.min ?? ''}
-                      onChange={(e) => 
-                        onUpdate({ 
-                          properties: { 
-                            ...field.properties, 
-                            min: parseInt(e.target.value) ?? undefined 
-                          } 
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Maximum Value</Label>
-                    <Input
-                      type="number"
-                      value={field.properties.max ?? ''}
-                      onChange={(e) => 
-                        onUpdate({ 
-                          properties: { 
-                            ...field.properties, 
-                            max: parseInt(e.target.value) ?? undefined 
-                          } 
-                        })
-                      }
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </PropertyGroup>
-
-          <Separator />
-
-          <PropertyGroup id="content" title="Content" icon={Type}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Placeholder</Label>
-                <Input
-                  value={field.properties.placeholder ?? ''}
-                  onChange={(e) => 
-                    onUpdate({ properties: { ...field.properties, placeholder: e.target.value } })
-                  }
-                  placeholder="Enter placeholder text"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Help Text</Label>
-                <Input
-                  value={field.properties.helpText ?? ''}
-                  onChange={(e) => 
-                    onUpdate({ properties: { ...field.properties, helpText: e.target.value } })
-                  }
-                  placeholder="Enter help text"
-                />
-              </div>
             </div>
           </PropertyGroup>
         </div>
@@ -1718,16 +1615,3 @@ const PropertiesPanel = ({
     </ScrollArea>
   );
 };
-
-export default function FormBuilderPage() {
-  return (
-    <PageTemplate
-      breadcrumbItems={[
-        { title: "Form Builder" }
-      ]}
-      layout="fullLeft"
-    >
-      <FormBuilderContent />
-    </PageTemplate>
-  );
-}

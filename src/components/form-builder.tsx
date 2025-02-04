@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useFieldArray, useForm, SubmitHandler } from "react-hook-form"
 import { Plus, Trash2 } from "lucide-react"
 import { v4 as uuidv4 } from "uuid"
-import type { UUID } from "crypto"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,11 +48,11 @@ export function FormBuilder() {
   const form = useForm<FormBuilderData>({
     resolver: zodResolver(formBuilderSchema),
     defaultValues: {
-      id: generateUUID() as UUID,
+      id: generateUUID(),
       name: "",
       steps: [
         {
-          id: generateUUID() as UUID,
+          id: generateUUID(),
           title: "Step 1",
           fields: []
         }
@@ -193,7 +192,7 @@ export function FormBuilder() {
               variant="outline"
               onClick={() =>
                 appendStep({
-                  id: generateUUID() as UUID,
+                  id: generateUUID(),
                   title: `Step ${steps.length + 1}`,
                   fields: []
                 })
