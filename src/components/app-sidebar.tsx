@@ -71,11 +71,6 @@ const data = {
       icon: FormInput,
     },
     {
-      title: "Forms",
-      url: "/admin/forms",
-      icon: FormInput,
-    },
-    {
       title: "Playground",
       url: "/admin/playground",
       icon: SquareTerminal,
@@ -96,7 +91,7 @@ const data = {
     },
     {
       title: "Agents",
-      url: "#",
+      url: "/admin/agents",
       icon: Bot,
       items: [
         {
@@ -114,31 +109,8 @@ const data = {
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
       title: "Settings",
-      url: "#",
+      url: "/admin/settings",
       icon: Settings2,
       items: [
         {

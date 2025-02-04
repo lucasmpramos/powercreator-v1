@@ -1,8 +1,11 @@
+import { useState } from "react"
 import PageTemplate from "@/components/page-template"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
-import { Plus, Copy, Trash2 } from "lucide-react"
+import { Plus, Copy, Trash2, Pencil } from "lucide-react"
+import { AgentDialog } from "@/components/agent-dialog"
+import { useNavigate } from "react-router-dom"
 
 interface Agent {
   id: string
@@ -37,6 +40,25 @@ const agents: Agent[] = [
 ]
 
 export default function AgentsPage() {
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
+  const navigate = useNavigate()
+
+  const handleCreateAgent = (data: any) => {
+    console.log("Creating agent:", data)
+    // Implement your create logic here
+  }
+
+  const handleEditAgent = (data: any) => {
+    console.log("Updating agent:", data)
+    // Implement your update logic here
+  }
+
+  const handleOpenEdit = (agent: Agent) => {
+    setEditingAgent(agent)
+    setDialogOpen(true)
+  }
+
   return (
     <PageTemplate
       layout="fullLeft"
@@ -48,11 +70,15 @@ export default function AgentsPage() {
             heading="AI Agents"
             description="Create and manage your AI agents for content generation"
           />
-          <Button className="gap-2">
+          <Button 
+            className="gap-2"
+            onClick={() => navigate("/admin/agents/new")}
+          >
             <Plus className="h-4 w-4" />
             New Agent
           </Button>
         </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
             <Card key={agent.id} className="p-6 space-y-4">
@@ -62,6 +88,14 @@ export default function AgentsPage() {
                   <p className="text-sm text-muted-foreground">{agent.description}</p>
                 </div>
                 <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -78,6 +112,14 @@ export default function AgentsPage() {
           ))}
         </div>
       </div>
+
+      <AgentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initialData={editingAgent}
+        onSubmit={editingAgent ? handleEditAgent : handleCreateAgent}
+        isEdit={!!editingAgent}
+      />
     </PageTemplate>
   )
 } 
