@@ -59,6 +59,22 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* New category-specific colors */
+    --category-content: 200 85% 45%;
+    --category-content-foreground: 0 0% 100%;
+    
+    --category-format: 150 60% 40%;
+    --category-format-foreground: 0 0% 100%;
+    
+    --category-style: 330 75% 45%;
+    --category-style-foreground: 0 0% 100%;
+    
+    --category-knowledge: 25 85% 45%;
+    --category-knowledge-foreground: 0 0% 100%;
+    
+    --category-system: 0 65% 45%;
+    --category-system-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -103,6 +119,22 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Dark theme category colors */
+    --category-content: 200 70% 50%;
+    --category-content-foreground: 0 0% 100%;
+    
+    --category-format: 150 55% 45%;
+    --category-format-foreground: 0 0% 100%;
+    
+    --category-style: 330 65% 50%;
+    --category-style-foreground: 0 0% 100%;
+    
+    --category-knowledge: 25 75% 50%;
+    --category-knowledge-foreground: 0 0% 100%;
+    
+    --category-system: 0 60% 50%;
+    --category-system-foreground: 0 0% 100%;
   }
 
   * {

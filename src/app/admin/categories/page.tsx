@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 interface Category {
   id: string
@@ -25,17 +26,38 @@ interface Category {
 const categories: Category[] = [
   {
     id: "1",
-    name: "Tone of Voice",
-    description: "Templates for defining agent's personality and tone",
+    name: "Writing Style",
+    description: "Templates for content tone and writing patterns",
     templatesCount: 5,
-    color: "blue"
+    color: "category-style"
   },
   {
     id: "2",
-    name: "Global Rules",
-    description: "Common rules and instructions for all agents",
+    name: "Content Rules",
+    description: "Base rules for content generation",
     templatesCount: 3,
-    color: "green"
+    color: "category-content"
+  },
+  {
+    id: "3",
+    name: "Output Format",
+    description: "Content structure and formatting guidelines",
+    templatesCount: 4,
+    color: "category-format"
+  },
+  {
+    id: "4",
+    name: "Industry Knowledge",
+    description: "Industry-specific content guidelines",
+    templatesCount: 6,
+    color: "category-knowledge"
+  },
+  {
+    id: "5",
+    name: "System Rules",
+    description: "Core system behavior and fallback patterns",
+    templatesCount: 2,
+    color: "category-system"
   }
 ]
 
@@ -72,7 +94,17 @@ export default function CategoriesPage() {
                 <TableRow key={category.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={`bg-${category.color}-50`}>
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "hover:bg-secondary/80",
+                          category.color === "category-content" && "bg-category-content/10 text-category-content hover:bg-category-content/20",
+                          category.color === "category-format" && "bg-category-format/10 text-category-format hover:bg-category-format/20",
+                          category.color === "category-style" && "bg-category-style/10 text-category-style hover:bg-category-style/20",
+                          category.color === "category-knowledge" && "bg-category-knowledge/10 text-category-knowledge hover:bg-category-knowledge/20",
+                          category.color === "category-system" && "bg-category-system/10 text-category-system hover:bg-category-system/20"
+                        )}
+                      >
                         {category.name}
                       </Badge>
                     </div>

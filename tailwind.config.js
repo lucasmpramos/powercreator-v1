@@ -67,6 +67,26 @@ module.exports = {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
+  			},
+  			'category-content': {
+  				DEFAULT: 'hsl(var(--category-content))',
+  				foreground: 'hsl(var(--category-content-foreground))'
+  			},
+  			'category-format': {
+  				DEFAULT: 'hsl(var(--category-format))',
+  				foreground: 'hsl(var(--category-format-foreground))'
+  			},
+  			'category-style': {
+  				DEFAULT: 'hsl(var(--category-style))',
+  				foreground: 'hsl(var(--category-style-foreground))'
+  			},
+  			'category-knowledge': {
+  				DEFAULT: 'hsl(var(--category-knowledge))',
+  				foreground: 'hsl(var(--category-knowledge-foreground))'
+  			},
+  			'category-system': {
+  				DEFAULT: 'hsl(var(--category-system))',
+  				foreground: 'hsl(var(--category-system-foreground))'
   			}
   		},
   		borderRadius: {
