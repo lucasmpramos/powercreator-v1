@@ -7,24 +7,29 @@ import {
 } from "@/components/ui/sidebar";
 import { BreadcrumbNav } from "@/components/breadcrumb";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 interface PageTemplateProps {
   children: React.ReactNode;
   // layout type: "fullLeft" (left aligned, full width) or "centered" (centered content)
   layout?: "fullLeft" | "centered";
   breadcrumbItems: Array<{ title: string; href?: string }>;
+  className?: string;
 }
 
 export default function PageTemplate({
   children,
   layout = "fullLeft",
   breadcrumbItems,
+  className,
 }: PageTemplateProps) {
   // If "centered", we can use a container class to center content.
-  const containerClass =
+  const containerClass = cn(
     layout === "centered" 
       ? "mx-auto max-w-4xl p-4 lg:px-8 pt-0" 
-      : "p-4 lg:px-8 pt-0";
+      : "p-4 lg:px-8 pt-0",
+    className
+  );
 
   return (
     <SidebarProvider>

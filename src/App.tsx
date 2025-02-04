@@ -11,6 +11,7 @@ import AgentDetailsPage from "./app/admin/agents/[id]/page"
 import CategoriesPage from "./app/admin/categories/page"
 import TemplatesPage from "./app/admin/templates/page"
 
+
 function App() {
   return (
     <ThemeProvider defaultTheme="system">
@@ -29,7 +30,9 @@ function App() {
         <Route path="/admin/templates" element={<TemplatesPage />} />
       </Routes>
     </ThemeProvider>
+    
   )
+  
 }
 
 export default App

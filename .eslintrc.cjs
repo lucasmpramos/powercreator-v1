@@ -15,8 +15,8 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: '.',
+    project: ['./tsconfig.json', './src/app/admin/flow/tsconfig.json'],
+    tsconfigRootDir: __dirname,
   },
   plugins: ['react-refresh', '@typescript-eslint'],
   rules: {
@@ -54,6 +54,7 @@ module.exports = {
   ignorePatterns: [
     'dist/**',
     '*.config.js',
-    '*.d.ts'
+    '*.d.ts',
+    'node_modules/**'
   ],
 } 

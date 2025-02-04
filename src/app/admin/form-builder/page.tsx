@@ -251,8 +251,8 @@ const FormBuilderContent = () => {
     // Handle dropping new fields from the sidebar
     if (active.id.startsWith('field-')) {
       const fieldTemplate = fieldCategories
-        .flatMap((category: FieldCategory) => category.fields as Field[])
-        .find((field: Field) => field.id === active.id);
+        .flatMap((category) => category.fields)
+        .find((field) => field.id === active.id);
 
       if (fieldTemplate) {
         const newField: Field = {
@@ -895,7 +895,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
     return (
       <div className="space-y-8">
         {/* Render grouped fields */}
-        {Object.entries(groups).map(([groupName, fields]) => {
+        {(Object.entries(groups) as Array<[string, Field[]]>).map(([groupName, fields]) => {
           if (groupName === 'ungrouped') {
             if (fields.length === 0) return null;
             return (
@@ -984,7 +984,7 @@ const Canvas = ({
   onDeleteField: (fieldId: string) => void;
   selectedFieldId?: string;
 }) => {
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ 
+  const { setNodeRef: setDroppableRef, isOver: isDroppableOver } = useDroppable({ 
     id: 'canvas-droppable',
   });
   
@@ -995,8 +995,8 @@ const Canvas = ({
           <div 
             ref={setDroppableRef}
             className={cn(
-              "min-h-full h-full border-2 border-dashed rounded-lg p-2 transition-colors",
-              isOver && "bg-muted/50 border-primary/50"
+              "min-h-full h-full border-2 border-dashed rounded-lg p-2 transition-colors" as const,
+              isDroppableOver && ("bg-muted/50 border-primary/50" as const)
             )}
           >
             {step.fields.length === 0 ? (

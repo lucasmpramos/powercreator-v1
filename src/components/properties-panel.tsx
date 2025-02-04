@@ -2,15 +2,13 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Trash2, Type, LayoutIcon, Box as _Box, ListChecks } from "lucide-react";
+import { ChevronDown, Trash2, Type, LayoutIcon, ListChecks } from "lucide-react";
 import { cn as _cn } from "@/lib/utils";
 import { Field } from "@/lib/types/form-builder";
-import { Textarea as _Textarea } from "@/components/ui/textarea";
 
 interface PropertiesPanelProps {
   field: Field | null;
@@ -72,7 +70,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="space-y-2">
             <Label>Label</Label>
             <Input
-              value={field.label}
+              value={field.properties.title ?? field.label ?? ''}
               onChange={(e) => onUpdate({ label: e.target.value })}
             />
           </div>
@@ -80,7 +78,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="space-y-2">
             <Label>Field Type</Label>
             <Select
-              value={field.type}
+              value={field.type ?? ''}
               onValueChange={(value) => onUpdate({ type: value })}
             >
               <SelectTrigger>
@@ -109,7 +107,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="space-y-2">
             <Label>Field Width</Label>
             <Select
-              value={field.properties.width || 'full'}
+              value={field.properties.width ?? 'full'}
               onValueChange={(value) => 
                 onUpdate({ 
                   properties: { ...field.properties, width: value }
@@ -134,7 +132,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
             <div className="space-y-2">
               <Label>Padding</Label>
               <Select
-                value={field.properties.padding || 'medium'}
+                value={field.properties.padding ?? 'medium'}
                 onValueChange={(value) => 
                   onUpdate({
                     properties: { ...field.properties, padding: value as Field['properties']['padding'] }
@@ -156,7 +154,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
             <div className="space-y-2">
               <Label>Margin</Label>
               <Select
-                value={field.properties.margin || 'medium'}
+                value={field.properties.margin ?? 'medium'}
                 onValueChange={(value) => 
                   onUpdate({
                     properties: { ...field.properties, margin: value as Field['properties']['margin'] }
@@ -185,7 +183,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="flex items-center justify-between">
             <Label>Required</Label>
             <Switch
-              checked={field.properties.required}
+              checked={field.properties.required ?? false}
               onCheckedChange={(checked) => 
                 onUpdate({ properties: { ...field.properties, required: checked } })
               }
@@ -195,7 +193,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="space-y-2">
             <Label>Placeholder</Label>
             <Input
-              value={field.properties.placeholder || ''}
+              value={field.properties.placeholder ?? ''}
               onChange={(e) => 
                 onUpdate({ properties: { ...field.properties, placeholder: e.target.value } })
               }
@@ -206,7 +204,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
           <div className="space-y-2">
             <Label>Help Text</Label>
             <Input
-              value={field.properties.helpText || ''}
+              value={field.properties.helpText ?? ''}
               onChange={(e) => 
                 onUpdate({ properties: { ...field.properties, helpText: e.target.value } })
               }
@@ -222,7 +220,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
                   <Input
                     value={option.label}
                     onChange={(e) => {
-                      const newOptions = [...(field.properties.options || [])];
+                      const newOptions = [...(field.properties.options ?? [])];
                       newOptions[index] = { ...option, label: e.target.value };
                       onUpdate({ 
                         properties: { ...field.properties, options: newOptions } 
@@ -247,7 +245,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
               <Button
                 variant="outline"
                 onClick={() => {
-                  const newOptions = [...(field.properties.options || [])];
+                  const newOptions = [...(field.properties.options ?? [])];
                   newOptions.push({ 
                     label: `Option ${newOptions.length + 1}`, 
                     value: `option${newOptions.length + 1}` 
@@ -268,7 +266,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
                 <Label>Minimum Length</Label>
                 <Input
                   type="number"
-                  value={field.properties.minLength || ''}
+                  value={field.properties.minLength ?? ''}
                   onChange={(e) => 
                     onUpdate({ 
                       properties: { 
@@ -283,7 +281,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
                 <Label>Maximum Length</Label>
                 <Input
                   type="number"
-                  value={field.properties.maxLength || ''}
+                  value={field.properties.maxLength ?? ''}
                   onChange={(e) => 
                     onUpdate({ 
                       properties: { 
@@ -303,7 +301,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
                 <Label>Minimum Value</Label>
                 <Input
                   type="number"
-                  value={field.properties.min || ''}
+                  value={field.properties.min ?? ''}
                   onChange={(e) => 
                     onUpdate({ 
                       properties: { 
@@ -318,7 +316,7 @@ export function PropertiesPanel({ field, onUpdate }: PropertiesPanelProps) {
                 <Label>Maximum Value</Label>
                 <Input
                   type="number"
-                  value={field.properties.max || ''}
+                  value={field.properties.max ?? ''}
                   onChange={(e) => 
                     onUpdate({ 
                       properties: { 

@@ -31,8 +31,6 @@ import {
   Heading1,
   Heading2,
   Heading3,
-  Square,
-  MessageSquare,
   PanelTop,
   Text as TextIcon,
   CirclePlay as ButtonIcon,
@@ -46,7 +44,7 @@ import { Label } from "@/components/ui/label";
 import React from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
-import FlowPropertiesPanel from "@/app/admin/flow/components/flow-properties-panel";
+import { FlowPropertiesPanel } from "@/components/flow-properties-panel";
 import { flowNodeTypes } from '@/app/admin/flow/components';
 
 // Map of field types to their icons
@@ -61,9 +59,7 @@ const iconMap: Record<string, LucideIcon> = {
   radio: Radio,
   checkbox: CheckSquare,
   // UI Components
-  dialog: MessageSquare,
-  card: Square,
-  panel: PanelTop,
+  container: PanelTop,
   h1: Heading1,
   h2: Heading2,
   h3: Heading3,
@@ -77,57 +73,26 @@ const fieldCategories = [
     name: "UI Components",
     fields: [
       { 
-        id: 'ui-dialog', 
-        type: 'dialog', 
-        label: 'Dialog Box', 
-        icon: MessageSquare, 
-        properties: {
-          title: 'Dialog Title',
-          width: 'md',
-          isContainer: true,
-        },
-        preview: (
-          <div className="fixed inset-0 z-50 flex items-start justify-center sm:items-center pointer-events-none opacity-50">
-            <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
-            <div className="fixed z-50 grid w-full gap-4 bg-background p-6 shadow-lg sm:max-w-lg sm:rounded-lg border">
-              <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-                <h2 className="text-lg font-semibold leading-none tracking-tight">
-                  Dialog Title
-                </h2>
-              </div>
-            </div>
-          </div>
-        )
-      },
-      { 
-        id: 'ui-card', 
-        type: 'card', 
-        label: 'Card', 
-        icon: Square, 
-        properties: {
-          title: 'Card Title',
-          width: 'full',
-          isContainer: true,
-        },
-        preview: (
-          <Card className="p-4 w-full pointer-events-none opacity-50">
-            <h3 className="font-semibold">Card Title</h3>
-          </Card>
-        )
-      },
-      { 
-        id: 'ui-panel', 
-        type: 'panel', 
-        label: 'Panel', 
+        id: 'ui-container', 
+        type: 'container', 
+        label: 'Container', 
         icon: PanelTop, 
         properties: {
-          title: 'Panel Title',
+          title: 'Container',
           width: 'full',
           isContainer: true,
+          padding: 'medium',
+          margin: 'medium',
         },
         preview: (
-          <div className="border rounded-lg p-4 w-full pointer-events-none opacity-50">
-            <h3 className="font-semibold">Panel Title</h3>
+          <div className="border rounded-lg p-4 w-full">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <PanelTop className="h-4 w-4" />
+              <span>Container</span>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground text-center p-4 border-2 border-dashed border-gray-200 rounded-md">
+              Drop elements here
+            </div>
           </div>
         )
       },
@@ -354,6 +319,7 @@ const EditableElement = memo(({ content, defaultText, text: initialText, onUpdat
 });
 EditableElement.displayName = 'EditableElement';
 
+// Remove these interfaces and components as they're now in their own files
 interface DroppableContainerProps {
   children: React.ReactNode;
   isEmpty: boolean;
@@ -381,9 +347,7 @@ const styles = {
     bottom: "-bottom-3",
   },
   container: {
-    dialog: "relative z-50 grid w-full gap-4 bg-background p-6 shadow-lg sm:max-w-lg sm:rounded-lg border",
-    card: "p-4 w-full",
-    panel: "border rounded-lg p-4 w-full",
+    base: "relative z-50 grid w-full gap-4 bg-background p-6 shadow-lg sm:rounded-lg border",
   },
   heading: {
     h1: "scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl",
@@ -438,12 +402,12 @@ DroppableContainer.displayName = 'DroppableContainer';
 
 // Helper component for connection handles
 interface HandleGroupProps {
-  type: 'dialog' | 'default';
+  type: 'container' | 'default';
 }
 
 // Memoize the HandleGroup component
 const HandleGroup = memo(({ type }: HandleGroupProps) => {
-  if (type === 'dialog') {
+  if (type === 'container') {
     return (
       <>
         <Handle 
@@ -488,7 +452,7 @@ const HandleGroup = memo(({ type }: HandleGroupProps) => {
 HandleGroup.displayName = 'HandleGroup';
 
 // Add a constant for container types and its type
-const CONTAINER_TYPES = ['dialog', 'card', 'panel'] as const;
+const CONTAINER_TYPES = ['container'] as const;
 type ContainerType = typeof CONTAINER_TYPES[number];
 
 // Add or update these interfaces near the top of the file
@@ -513,6 +477,7 @@ interface DraggedFieldData {
   label: string;
   properties: FieldProperties;
   icon?: LucideIcon;
+  preview?: React.ReactNode;
 }
 
 interface FormField {
@@ -521,6 +486,7 @@ interface FormField {
   label: string;
   icon: LucideIcon;
   properties: FieldProperties;
+  preview?: React.ReactNode;
   nodeChildNodes?: FormField[];
   onChildSelect?: (childIndex: number | null) => void;
   onChildUpdate?: (childIndex: number, updates: Partial<FormField>) => void;
@@ -623,8 +589,8 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
           icon: iconMap[fieldData.type] ?? fieldData.icon,
           properties: {
             ...fieldData.properties,
-            title: fieldData.label,
-            text: fieldData.label,
+            text: fieldData.properties.text ?? fieldData.label,
+            title: fieldData.properties.title ?? fieldData.label,
             width: 'full' as const,
             padding: 'medium' as const,
             margin: 'medium' as const,
@@ -656,7 +622,7 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
 
   const wrapWithHandles = useCallback((content: React.ReactNode, type: string) => (
     <div className="relative group">
-      <HandleGroup type={type === 'dialog' ? 'dialog' : 'default'} />
+      <HandleGroup type={type === 'container' ? 'container' : 'default'} />
       {content}
     </div>
   ), []);
@@ -690,7 +656,7 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
     dialog: (_field) => wrapWithHandles(
       <div 
         className={cn(
-          styles.container.dialog,
+          styles.container.base,
           "cursor-pointer relative"
         )}
         data-node-id={data.id}
@@ -709,7 +675,7 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
     card: (_field) => wrapWithHandles(
       <Card 
         className={cn(
-          styles.container.card,
+          styles.container.base,
           "cursor-pointer relative"
         )}
         data-node-id={data.id}
@@ -728,7 +694,7 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
     panel: (_field) => wrapWithHandles(
       <div 
         className={cn(
-          styles.container.panel,
+          styles.container.base,
           "cursor-pointer relative"
         )}
         data-node-id={data.id}
@@ -867,7 +833,7 @@ const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: bo
 });
 FormFieldNode.displayName = 'FormFieldNode';
 
-export function VisualFormBuilder() {
+export default function VisualFormBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -884,7 +850,11 @@ export function VisualFormBuilder() {
 
   const onDragStart = useCallback((event: React.DragEvent, field: FormField) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify({
-      ...field,
+      type: field.type,
+      label: field.label,
+      properties: field.properties,
+      preview: field.preview,
+      // We can't serialize the icon function, so we'll reattach it on drop
       icon: undefined,
     }));
     event.dataTransfer.effectAllowed = 'move';
@@ -912,13 +882,14 @@ export function VisualFormBuilder() {
       icon: fieldData.icon ?? iconMap[fieldData.type],
       properties: {
         ...fieldData.properties,
-        title: fieldData.label,
-        text: fieldData.label,
+        text: fieldData.properties.text ?? fieldData.label,
+        title: fieldData.properties.title ?? fieldData.label,
         width: 'full' as const,
         padding: isContainer ? 'large' as const : 'medium' as const,
         margin: isContainer ? 'large' as const : 'medium' as const,
         variant: isContainer ? 'default' as const : undefined,
       },
+      preview: fieldData.preview,
       nodeChildNodes: [],
       onChildSelect: (childIndex: number | null) => {
         setSelectedChild({ nodeId, childIndex });
@@ -995,11 +966,13 @@ export function VisualFormBuilder() {
         icon: iconMap[fieldData.type],
         properties: {
           ...fieldData.properties,
-          text: fieldData.label,
+          text: fieldData.properties.text ?? fieldData.label,
+          title: fieldData.properties.title ?? fieldData.label,
         },
         draggable: true,
         connectable: true,
         elementType: fieldData.type,
+        preview: fieldData.preview,
       };
 
       containerNode.data.nodeChildNodes = [fieldNode];
@@ -1010,6 +983,11 @@ export function VisualFormBuilder() {
       const newNode = createNode({
         ...fieldData,
         icon: iconMap[fieldData.type],
+        properties: {
+          ...fieldData.properties,
+          text: fieldData.properties.text ?? fieldData.label,
+          title: fieldData.properties.title ?? fieldData.label,
+        }
       }, position);
       
       setNodes(nds => nds.concat(newNode));
@@ -1038,11 +1016,13 @@ export function VisualFormBuilder() {
         type: childNode.type,
         position: { x: 0, y: 0 },
         data: {
+          ...childNode,
           label: childNode.label,
           elementType: childNode.type,
           content: childNode.properties.text,
           draggable: true,
           connectable: true,
+          properties: childNode.properties,
         },
         draggable: true,
       };

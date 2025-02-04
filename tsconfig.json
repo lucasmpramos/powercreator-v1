@@ -19,9 +19,15 @@
     "noImplicitAny": true,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "baseUrl": "."
   },
-  "include": ["src"],
-  "exclude": ["src/tempobook"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
+  "exclude": ["src/tempobook", "node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
