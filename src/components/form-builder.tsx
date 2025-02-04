@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useFieldArray, useForm } from "react-hook-form"
+import { useFieldArray, useForm, SubmitHandler } from "react-hook-form"
 import { Plus, Trash2 } from "lucide-react"
 import { v4 as uuidv4 } from "uuid"
 import type { UUID } from "crypto"
@@ -28,15 +28,32 @@ import {
   Field as _Field
 } from "@/lib/types/form-builder"
 
+// Helper type guard to ensure the caught error is an Error instance
+function isError(value: unknown): value is Error {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'message' in value &&
+    typeof (value as { message?: unknown }).message === 'string'
+  );
+}
+
+// Helper function to safely parse JSON with type T
+function safeJsonParse<T>(text: string): T {
+  return JSON.parse(text) as T;
+}
+
+const generateUUID = (): string => (uuidv4 as () => string)();
+
 export function FormBuilder() {
   const form = useForm<FormBuilderData>({
     resolver: zodResolver(formBuilderSchema),
     defaultValues: {
-      id: uuidv4() as UUID,
+      id: generateUUID() as UUID,
       name: "",
       steps: [
         {
-          id: uuidv4() as UUID,
+          id: generateUUID() as UUID,
           title: "Step 1",
           fields: []
         }
@@ -51,11 +68,22 @@ export function FormBuilder() {
 
   const [currentStep, setCurrentStep] = React.useState(0)
 
-  function onSubmit(data: FormBuilderData) {
+  const onSubmit: SubmitHandler<FormBuilderData> = (data) => {
     try {
-      console.log(data);
+      // Convert data to a string and then parse it back via the safe helper
+      const dataString: string = JSON.stringify(data);
+      const parsedData: FormBuilderData = safeJsonParse<FormBuilderData>(dataString);
+      console.log(parsedData);
     } catch (error: unknown) {
-      console.error('Form submission error:', String(error));
+      let message: string;
+      if (isError(error)) {
+        message = error.message;
+      } else if (typeof error === "object" && error !== null) {
+        message = JSON.stringify(error);
+      } else {
+        message = String(error);
+      }
+      console.error(`Form submission error: ${message}`);
     }
   }
 
@@ -165,7 +193,7 @@ export function FormBuilder() {
               variant="outline"
               onClick={() =>
                 appendStep({
-                  id: uuidv4() as UUID,
+                  id: generateUUID() as UUID,
                   title: `Step ${steps.length + 1}`,
                   fields: []
                 })
