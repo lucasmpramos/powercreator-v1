@@ -504,16 +504,9 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
     setChildNodes(data.childNodes || []);
   }, [data.childNodes]);
 
+  // Simplified container click handler - we don't need it anymore since we're using ReactFlow's selection
   const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    // Don't stop propagation - let the click reach ReactFlow's handler
-    // Only prevent default to avoid any unwanted behavior
     e.preventDefault();
-    
-    // Only handle clicks directly on the container, not its children
-    if (e.target === e.currentTarget || (e.currentTarget as HTMLElement).contains(e.target as HTMLElement)) {
-      // Let the click event bubble up to ReactFlow
-      return;
-    }
   }, []);
 
   const handleChildClick = useCallback((e: React.MouseEvent, index: number) => {
@@ -521,129 +514,118 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
     data.onChildSelect?.(index);
   }, [data.onChildSelect]);
 
-  // Add effect to handle document clicks for focus
-  useEffect(() => {
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.form-builder-child')) {
-        setDropTarget(null);
-      }
-    };
+  // Memoize common handlers
+  const commonDropHandlers = useMemo(() => ({
+    onDragOver: (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
 
-    document.addEventListener('mousedown', handleDocumentClick);
-    return () => {
-      document.removeEventListener('mousedown', handleDocumentClick);
-    };
-  }, []);
+      const container = event.currentTarget as HTMLElement;
+      const containerRect = container.getBoundingClientRect();
+      const relativeY = event.clientY - containerRect.top;
 
-  const onContainerDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
-
-    const container = event.currentTarget as HTMLElement;
-    const containerRect = container.getBoundingClientRect();
-    const relativeY = event.clientY - containerRect.top;
-
-    if (childNodes.length === 0) {
-      setDropTarget({ index: 0, position: 'top' });
-      return;
-    }
-
-    const children = Array.from(container.getElementsByClassName('form-builder-child'));
-    
-    // If we're above the first element
-    const firstChild = children[0];
-    const firstChildRect = firstChild.getBoundingClientRect();
-    const firstChildTop = firstChildRect.top - containerRect.top;
-    if (relativeY < firstChildTop) {
-      setDropTarget({ index: 0, position: 'top' });
-      return;
-    }
-
-    // If we're below the last element
-    const lastChild = children[children.length - 1];
-    const lastChildRect = lastChild.getBoundingClientRect();
-    const lastChildBottom = lastChildRect.bottom - containerRect.top;
-    if (relativeY > lastChildBottom) {
-      setDropTarget({ index: children.length - 1, position: 'bottom' });
-      return;
-    }
-
-    // Check each element and the space between elements
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i];
-      const childRect = child.getBoundingClientRect();
-      const childTop = childRect.top - containerRect.top;
-      const childBottom = childRect.bottom - containerRect.top;
-      
-      // If we're directly over an element
-      if (relativeY >= childTop && relativeY <= childBottom) {
-        const midPoint = childTop + (childRect.height / 2);
-        setDropTarget({ 
-          index: i, 
-          position: relativeY < midPoint ? 'top' : 'bottom' 
-        });
+      if (childNodes.length === 0) {
+        setDropTarget({ index: 0, position: 'top' });
         return;
       }
+
+      const children = Array.from(container.getElementsByClassName('form-builder-child'));
       
-      // If we're between this element and the next one
-      if (i < children.length - 1) {
-        const nextChild = children[i + 1];
-        const nextChildRect = nextChild.getBoundingClientRect();
-        const nextChildTop = nextChildRect.top - containerRect.top;
+      // Above first element
+      const firstChild = children[0];
+      const firstChildRect = firstChild.getBoundingClientRect();
+      const firstChildTop = firstChildRect.top - containerRect.top;
+      if (relativeY < firstChildTop) {
+        setDropTarget({ index: 0, position: 'top' });
+        return;
+      }
+
+      // Below last element
+      const lastChild = children[children.length - 1];
+      const lastChildRect = lastChild.getBoundingClientRect();
+      const lastChildBottom = lastChildRect.bottom - containerRect.top;
+      if (relativeY > lastChildBottom) {
+        setDropTarget({ index: children.length - 1, position: 'bottom' });
+        return;
+      }
+
+      // Between elements
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        const childRect = child.getBoundingClientRect();
+        const childTop = childRect.top - containerRect.top;
+        const childBottom = childRect.bottom - containerRect.top;
         
-        if (relativeY > childBottom && relativeY < nextChildTop) {
-          setDropTarget({ index: i, position: 'bottom' });
+        if (relativeY >= childTop && relativeY <= childBottom) {
+          setDropTarget({ 
+            index: i, 
+            position: relativeY < (childTop + childRect.height / 2) ? 'top' : 'bottom' 
+          });
           return;
         }
+        
+        if (i < children.length - 1) {
+          const nextChild = children[i + 1];
+          const nextChildRect = nextChild.getBoundingClientRect();
+          const nextChildTop = nextChildRect.top - containerRect.top;
+          
+          if (relativeY > childBottom && relativeY < nextChildTop) {
+            setDropTarget({ index: i, position: 'bottom' });
+            return;
+          }
+        }
+      }
+    },
+    onDrop: (event: React.DragEvent) => {
+      event.stopPropagation();
+      event.preventDefault();
+      
+      try {
+        const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+        
+        if (CONTAINER_TYPES.includes(data.type as ContainerType) && CONTAINER_TYPES.includes(fieldData.type as ContainerType)) {
+          return; // Silently prevent container nesting
+        }
+
+        const newNode = {
+          id: `${fieldData.type}-${Date.now()}`,
+          type: fieldData.type,
+          label: fieldData.label,
+          icon: iconMap[fieldData.type],
+          properties: {
+            ...fieldData.properties,
+            title: fieldData.label,
+            text: fieldData.label,
+            width: 'full',
+            padding: 'medium',
+            margin: 'medium',
+          },
+        };
+        
+        const updatedNodes = [...childNodes];
+        if (dropTarget) {
+          const insertIndex = dropTarget.position === 'bottom' ? dropTarget.index + 1 : dropTarget.index;
+          updatedNodes.splice(insertIndex, 0, newNode);
+        } else {
+          updatedNodes.push(newNode);
+        }
+
+        setChildNodes(updatedNodes);
+        data.onChildNodesChange?.(updatedNodes);
+        setDropTarget(null);
+      } catch (error) {
+        console.error('Failed to parse dropped data:', error);
+      }
+    },
+    onDragLeave: (e: React.DragEvent) => {
+      const container = e.currentTarget as HTMLElement;
+      const relatedTarget = e.relatedTarget as HTMLElement | null;
+      if (!relatedTarget || !container.contains(relatedTarget)) {
+        setDropTarget(null);
       }
     }
-  }, [childNodes.length]);
-
-  const onDropToContainer = useCallback((event: React.DragEvent) => {
-    event.stopPropagation();
-    event.preventDefault();
-    
-    try {
-      const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
-      
-      if (CONTAINER_TYPES.includes(data.type as ContainerType) && CONTAINER_TYPES.includes(fieldData.type as ContainerType)) {
-        console.warn('Cannot nest containers inside each other');
-        return;
-      }
-
-      const newNode = {
-        id: `${fieldData.type}-${Math.random()}`,
-        type: fieldData.type,
-        label: fieldData.label,
-        icon: iconMap[fieldData.type],
-        properties: {
-          ...fieldData.properties,
-          title: fieldData.label,
-          text: fieldData.label,
-          width: 'full',
-          padding: 'medium',
-          margin: 'medium',
-        },
-      };
-      
-      const updatedNodes = [...childNodes];
-      if (dropTarget) {
-        const insertIndex = dropTarget.position === 'bottom' ? dropTarget.index + 1 : dropTarget.index;
-        updatedNodes.splice(insertIndex, 0, newNode);
-      } else {
-        updatedNodes.push(newNode);
-      }
-
-      // Update both local state and parent's data
-      setChildNodes(updatedNodes);
-      data.onChildNodesChange?.(updatedNodes);
-      setDropTarget(null);
-    } catch (error) {
-      console.error('Failed to parse dropped data:', error);
-    }
-  }, [dropTarget, data.type, data.onChildNodesChange, childNodes]);
+  }), [childNodes, dropTarget, data.type, data.onChildNodesChange]);
 
   const wrapWithHandles = useCallback((content: React.ReactNode, type: string) => (
     <div className="relative group">
@@ -667,19 +649,6 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       }}
     />
   ), [dropTarget, data.onChildUpdate]);
-
-  // Memoize common handlers
-  const commonDropHandlers = useMemo(() => ({
-    onDragOver: onContainerDragOver,
-    onDrop: onDropToContainer,
-    onDragLeave: (e: React.DragEvent) => {
-      const container = e.currentTarget as HTMLElement;
-      const relatedTarget = e.relatedTarget as HTMLElement | null;
-      if (!relatedTarget || !container.contains(relatedTarget)) {
-        setDropTarget(null);
-      }
-    }
-  }), [onContainerDragOver, onDropToContainer]);
 
   // Memoize preview components map
   const previewComponents = useMemo(() => ({
@@ -879,11 +848,10 @@ export function VisualFormBuilder() {
   }, [setEdges]);
 
   const onDragStart = useCallback((event: React.DragEvent, field: Field) => {
-    const fieldData = {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify({
       ...field,
       icon: undefined,
-    };
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(fieldData));
+    }));
     event.dataTransfer.effectAllowed = 'move';
   }, []);
 
@@ -898,23 +866,11 @@ export function VisualFormBuilder() {
     setSelectedChild(null);
   }, []);
 
-  const onDrop = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-
-    const reactFlowBounds = document.querySelector('.react-flow-wrapper')?.getBoundingClientRect();
-    const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
-
-    if (!reactFlowBounds) return;
-
-    const position = {
-      x: event.clientX - reactFlowBounds.left,
-      y: event.clientY - reactFlowBounds.top,
-    };
-
+  const createNode = useCallback((fieldData: Field & { type: string }, position: { x: number; y: number }) => {
     const nodeId = `${fieldData.type}-${Date.now()}`;
-    const isContainer = CONTAINER_TYPES.includes(fieldData.type);
+    const isContainer = CONTAINER_TYPES.includes(fieldData.type as ContainerType);
 
-    const newNode = {
+    return {
       id: nodeId,
       type: 'formField',
       position,
@@ -934,10 +890,6 @@ export function VisualFormBuilder() {
           layout: isContainer ? 'vertical' : undefined,
         },
         childNodes: [],
-        onSelect: () => {
-          setSelectedNode(nodes.find(n => n.id === nodeId) || null);
-          setSelectedChild(null);
-        },
         onChildSelect: (childIndex: number) => {
           setSelectedChild({ nodeId, childIndex });
           setSelectedNode(null);
@@ -972,10 +924,24 @@ export function VisualFormBuilder() {
         },
       },
     };
+  }, []);
 
+  const onDrop = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+
+    const reactFlowBounds = document.querySelector('.react-flow-wrapper')?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+
+    const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+    const position = {
+      x: event.clientX - reactFlowBounds.left,
+      y: event.clientY - reactFlowBounds.top,
+    };
+
+    const newNode = createNode(fieldData, position);
     setNodes(nds => nds.concat(newNode));
     setSelectedNode(newNode);
-  }, [nodes]);
+  }, [createNode]);
 
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
