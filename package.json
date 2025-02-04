@@ -1,7 +1,7 @@
 {
-  "name": "starter",
+  "name": "powercreator-v1",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -43,6 +43,11 @@
     "@radix-ui/react-toggle": "^1.0.3",
     "@radix-ui/react-tooltip": "^1.1.7",
     "@supabase/supabase-js": "^2.45.6",
+    "@tiptap/extension-mention": "^2.11.5",
+    "@tiptap/pm": "^2.11.5",
+    "@tiptap/react": "^2.11.5",
+    "@tiptap/starter-kit": "^2.11.5",
+    "@tiptap/suggestion": "^2.11.5",
     "@types/lodash": "^4.17.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -58,6 +63,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.51.5",
+    "react-mentions": "^4.4.10",
     "react-resizable-panels": "^2.0.19",
     "react-router": "^6.23.1",
     "react-router-dom": "^6.23.1",
@@ -65,6 +71,7 @@
     "reactflow": "^11.11.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "tippy.js": "^6.3.7",
     "vaul": "^0.9.1",
     "zod": "^3.23.8"
   },
@@ -76,21 +83,29 @@
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react-swc": "3.5.0",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.38",
-    "tailwindcss": "3.4.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.1",
+    "postcss-import": "^16.1.0",
+    "tailwindcss": "^3.4.1",
     "tempo-devtools": "^2.0.94",
     "typescript": "^5.2.2",
     "vite": "^5.2.0"
   },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "description": "PowerCreator - AI-Powered Content Creation Platform enabling teams to interact with intelligent AI agents for content generation, marketing campaigns, and more.",
   "main": "postcss.config.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lucasmpramos/powercreator-v1.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "ai",
+    "content-creation",
+    "marketing",
+    "automation",
+    "react",
+    "typescript"
+  ],
+  "author": "Lucas Machado",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/lucasmpramos/powercreator-v1/issues"

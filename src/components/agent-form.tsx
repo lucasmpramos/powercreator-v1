@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
+import { MentionInput } from './mention-input'
 
 interface AgentFormProps {
   initialData?: {
@@ -101,15 +102,19 @@ export function AgentForm({
         <Separator className="my-4" />
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="systemPrompt">System Prompt</Label>
-            <Textarea
-              id="systemPrompt"
-              value={formData.systemPrompt}
-              onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-              placeholder="Enter the system prompt..."
-              className="min-h-[100px]"
-            />
+            <Label htmlFor="systemPrompt">Agent Instructions</Label>
+            <div className="relative w-full">
+              <MentionInput
+                value={formData.systemPrompt}
+                onChange={(value) => setFormData({ ...formData, systemPrompt: value })}
+                placeholder="Enter instructions for your agent..."
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                Use @template to insert predefined templates
+              </p>
+            </div>
           </div>
+
           <div className="flex items-center justify-between">
             <div>
               <Label>Public Agent</Label>

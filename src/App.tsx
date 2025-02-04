@@ -8,6 +8,8 @@ import FormBuilderPage from "./app/admin/form-builder/page"
 import UsersPage from "./app/admin/users/page"
 import SettingsPage from "./app/admin/settings/page"
 import AgentDetailsPage from "./app/admin/agents/[id]/page"
+import CategoriesPage from "./app/admin/categories/page"
+import TemplatesPage from "./app/admin/templates/page"
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
         <Route path="/admin/playground" element={<PlaygroundPage />} />
         <Route path="/admin/users" element={<UsersPage />} />
         <Route path="/admin/settings" element={<SettingsPage />} />
+        <Route path="/admin/categories" element={<CategoriesPage />} />
+        <Route path="/admin/templates" element={<TemplatesPage />} />
       </Routes>
     </ThemeProvider>
   )

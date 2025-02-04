@@ -19,6 +19,8 @@ import {
   Moon,
   Bolt,
   Zap,
+  FileText,
+  Tag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -130,6 +132,16 @@ const data = {
           url: "#",
         },
       ],
+    },
+    {
+      title: "Templates",
+      url: "/admin/templates",
+      icon: FileText,
+    },
+    {
+      title: "Categories",
+      url: "/admin/categories",
+      icon: Tag,
     },
   ],
   navSecondary: [
