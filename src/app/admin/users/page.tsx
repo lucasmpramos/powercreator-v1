@@ -2,12 +2,11 @@ import PageTemplate from "@/components/page-template"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { PageHeader } from "@/components/page-header"
-import { Plus, Mail, MoreHorizontal, UserPlus } from "lucide-react"
+import { Mail, MoreHorizontal, UserPlus } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"

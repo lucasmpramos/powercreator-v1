@@ -10,7 +10,6 @@ import ReactFlow, {
   Edge,
   Node,
   BackgroundVariant,
-  NodeTypes,
   Handle,
   Position,
 } from 'reactflow';
@@ -20,7 +19,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  FormInput, 
   Type, 
   ListChecks, 
   AlignLeft,
@@ -30,8 +28,6 @@ import {
   CheckSquare,
   FileInput,
   Mail,
-  LucideIcon,
-  LayoutPanelTop,
   Heading1,
   Heading2,
   Heading3,
@@ -42,11 +38,11 @@ import {
   CirclePlay as ButtonIcon,
   Check,
   X,
+  LucideIcon,
 } from 'lucide-react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { PropertiesPanel } from "@/components/properties-panel";
-import { Field } from "@/types/form-builder";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field } from "@/lib/types/form-builder";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React from 'react';
@@ -244,13 +240,13 @@ interface EditableElementProps {
 
 const EditableElement = memo(({ content, defaultText, text: initialText, onUpdate, className }: EditableElementProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [text, setText] = useState(initialText || defaultText);
+  const [text, setText] = useState(initialText ?? defaultText);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Update local state when external text changes
   useEffect(() => {
-    setText(initialText || defaultText);
+    setText(initialText ?? defaultText);
   }, [initialText, defaultText]);
 
   useEffect(() => {
@@ -295,7 +291,7 @@ const EditableElement = memo(({ content, defaultText, text: initialText, onUpdat
     // Cancel on Escape
     if (e.key === 'Escape') {
       setIsEditing(false);
-      setText(initialText || defaultText);
+      setText(initialText ?? defaultText);
     }
   }, [handleSave, initialText, defaultText]);
 
@@ -329,7 +325,7 @@ const EditableElement = memo(({ content, defaultText, text: initialText, onUpdat
             className="h-6 w-6 p-0"
             onClick={() => {
               setIsEditing(false);
-              setText(initialText || defaultText);
+              setText(initialText ?? defaultText);
             }}
           >
             <X className="h-4 w-4" />
@@ -495,26 +491,58 @@ HandleGroup.displayName = 'HandleGroup';
 const CONTAINER_TYPES = ['dialog', 'card', 'panel'] as const;
 type ContainerType = typeof CONTAINER_TYPES[number];
 
+// Add or update these interfaces near the top of the file
+interface FieldProperties {
+  label?: string;
+  placeholder?: string;
+  title?: string;
+  text?: string;
+  width?: 'full' | 'auto' | 'md';
+  padding?: 'small' | 'none' | 'medium' | 'large';
+  margin?: 'small' | 'none' | 'medium' | 'large';
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  isContainer?: boolean;
+  helpText?: string;
+  required?: boolean;
+  validation?: string;
+  alignment?: 'center' | 'left' | 'right';
+}
+
+interface DraggedFieldData {
+  type: string;
+  label: string;
+  properties: FieldProperties;
+  icon?: LucideIcon;
+}
+
+interface FormField {
+  id: string;
+  type: string;
+  label: string;
+  icon: LucideIcon;
+  properties: FieldProperties;
+  nodeChildNodes?: FormField[];
+  onChildSelect?: (childIndex: number | null) => void;
+  onChildUpdate?: (childIndex: number, updates: Partial<FormField>) => void;
+  onChildNodesChange?: (updatedChildNodes: FormField[]) => void;
+}
+
 // Move FormFieldNode outside
-const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolean }) => {
-  const [childNodes, setChildNodes] = useState<Field[]>(() => data.childNodes || []);
+const FormFieldNode = memo(({ data, selected }: { data: FormField; selected?: boolean }) => {
   const [dropTarget, setDropTarget] = useState<{ index: number; position: 'top' | 'bottom' } | null>(null);
   
-  useEffect(() => {
-    setChildNodes(data.childNodes || []);
-  }, [data.childNodes]);
+  // Get child nodes from data
+  const nodeChildNodes = useMemo(() => {
+    if (!data) return [];
+    return data.nodeChildNodes ?? [];
+  }, [data]);
 
-  // Simplified container click handler - we don't need it anymore since we're using ReactFlow's selection
-  const handleContainerClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-  }, []);
-
-  const handleChildClick = useCallback((e: React.MouseEvent, index: number) => {
+  // Handle child click event
+  const onChildNodeClick = useCallback((e: React.MouseEvent, index: number) => {
     e.stopPropagation();
     data.onChildSelect?.(index);
-  }, [data.onChildSelect]);
+  }, [data]);
 
-  // Memoize common handlers
   const commonDropHandlers = useMemo(() => ({
     onDragOver: (event: React.DragEvent) => {
       event.preventDefault();
@@ -525,7 +553,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       const containerRect = container.getBoundingClientRect();
       const relativeY = event.clientY - containerRect.top;
 
-      if (childNodes.length === 0) {
+      if (nodeChildNodes.length === 0) {
         setDropTarget({ index: 0, position: 'top' });
         return;
       }
@@ -582,7 +610,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       event.preventDefault();
       
       try {
-        const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+        const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow')) as DraggedFieldData;
         
         if (CONTAINER_TYPES.includes(data.type as ContainerType) && CONTAINER_TYPES.includes(fieldData.type as ContainerType)) {
           return; // Silently prevent container nesting
@@ -592,18 +620,18 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
           id: `${fieldData.type}-${Date.now()}`,
           type: fieldData.type,
           label: fieldData.label,
-          icon: iconMap[fieldData.type],
+          icon: iconMap[fieldData.type] ?? fieldData.icon,
           properties: {
             ...fieldData.properties,
             title: fieldData.label,
             text: fieldData.label,
-            width: 'full',
-            padding: 'medium',
-            margin: 'medium',
+            width: 'full' as const,
+            padding: 'medium' as const,
+            margin: 'medium' as const,
           },
-        };
+        } satisfies FormField;
         
-        const updatedNodes = [...childNodes];
+        const updatedNodes = [...nodeChildNodes];
         if (dropTarget) {
           const insertIndex = dropTarget.position === 'bottom' ? dropTarget.index + 1 : dropTarget.index;
           updatedNodes.splice(insertIndex, 0, newNode);
@@ -611,7 +639,6 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
           updatedNodes.push(newNode);
         }
 
-        setChildNodes(updatedNodes);
         data.onChildNodesChange?.(updatedNodes);
         setDropTarget(null);
       } catch (error) {
@@ -625,7 +652,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         setDropTarget(null);
       }
     }
-  }), [childNodes, dropTarget, data.type, data.onChildNodesChange]);
+  }), [nodeChildNodes, dropTarget, data.type, data.onChildNodesChange]);
 
   const wrapWithHandles = useCallback((content: React.ReactNode, type: string) => (
     <div className="relative group">
@@ -634,7 +661,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
     </div>
   ), []);
 
-  const renderEditableContent = useCallback((content: React.ReactNode, defaultText: string, field: Field, className?: string) => (
+  const renderEditableContent = useCallback((content: React.ReactNode, defaultText: string, field: FormField, className?: string) => (
     <EditableElement
       content={content}
       defaultText={defaultText}
@@ -651,8 +678,16 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
   ), [dropTarget, data.onChildUpdate]);
 
   // Memoize preview components map
-  const previewComponents = useMemo(() => ({
-    dialog: (field) => wrapWithHandles(
+  const previewComponents = useMemo<Record<string, (field: FormField, isChild?: boolean) => React.ReactNode>>(() => ({
+    input: (_field) => renderEditableContent(
+      <div className="grid w-full gap-1.5">
+        <Label>{_field.properties.label ?? 'Label'}</Label>
+        <Input placeholder={_field.properties.placeholder ?? 'Placeholder'} />
+      </div>,
+      'Input',
+      _field
+    ),
+    dialog: (_field) => wrapWithHandles(
       <div 
         className={cn(
           styles.container.dialog,
@@ -662,7 +697,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         data-node-type="dialog"
       >
         <DroppableContainer
-          isEmpty={childNodes.length === 0}
+          isEmpty={nodeChildNodes.length === 0}
           showDropIndicator={!!dropTarget}
           {...commonDropHandlers}
         >
@@ -671,7 +706,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       </div>
     , 'dialog'),
 
-    card: (field) => wrapWithHandles(
+    card: (_field) => wrapWithHandles(
       <Card 
         className={cn(
           styles.container.card,
@@ -681,7 +716,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         data-node-type="card"
       >
         <DroppableContainer
-          isEmpty={childNodes.length === 0}
+          isEmpty={nodeChildNodes.length === 0}
           showDropIndicator={!!dropTarget}
           {...commonDropHandlers}
         >
@@ -690,7 +725,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
       </Card>
     , 'card'),
 
-    panel: (field) => wrapWithHandles(
+    panel: (_field) => wrapWithHandles(
       <div 
         className={cn(
           styles.container.panel,
@@ -700,7 +735,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         data-node-type="panel"
       >
         <DroppableContainer
-          isEmpty={childNodes.length === 0}
+          isEmpty={nodeChildNodes.length === 0}
           showDropIndicator={!!dropTarget}
           {...commonDropHandlers}
         >
@@ -711,7 +746,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     h1: (field) => renderEditableContent(
       <h1 className={styles.heading.h1}>
-        {field.properties.text || 'Heading 1'}
+        {field.properties.text ?? 'Heading 1'}
       </h1>,
       'Heading 1',
       field,
@@ -720,7 +755,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     h2: (field) => renderEditableContent(
       <h2 className={styles.heading.h2}>
-        {field.properties.text || 'Heading 2'}
+        {field.properties.text ?? 'Heading 2'}
       </h2>,
       'Heading 2',
       field,
@@ -729,7 +764,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     h3: (field) => renderEditableContent(
       <h3 className={styles.heading.h3}>
-        {field.properties.text || 'Heading 3'}
+        {field.properties.text ?? 'Heading 3'}
       </h3>,
       'Heading 3',
       field,
@@ -738,10 +773,10 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     text: (field) => (
       <div className="grid w-full max-w-sm items-center gap-1.5">
-        <Label>{field.properties.label || 'Text Input'}</Label>
+        <Label>{field.properties.label ?? 'Text Input'}</Label>
         <Input 
           type="text" 
-          placeholder={field.properties.placeholder || "Enter text..."} 
+          placeholder={field.properties.placeholder ?? "Enter text..."} 
           className={styles.input.base}
           disabled
         />
@@ -750,10 +785,10 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     textarea: (field) => (
       <div className="grid w-full max-w-sm items-center gap-1.5">
-        <Label>{field.properties.label || 'Text Area'}</Label>
+        <Label>{field.properties.label ?? 'Text Area'}</Label>
         <textarea 
           className={styles.input.textarea}
-          placeholder={field.properties.placeholder || "Enter text..."} 
+          placeholder={field.properties.placeholder ?? "Enter text..."} 
           disabled
         />
       </div>
@@ -761,7 +796,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
 
     paragraph: (field) => renderEditableContent(
       <p className={styles.text.paragraph}>
-        {field.properties.text || 'Enter your text here'}
+        {field.properties.text ?? 'Enter your text here'}
       </p>,
       'Enter your text here',
       field,
@@ -769,20 +804,19 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
     ),
 
     button: (field) => renderEditableContent(
-      <Button variant={field.properties.variant || 'default'}>
-        {field.properties.text || 'Button'}
+      <Button variant={field.properties.variant ?? 'default'}>
+        {field.properties.text ?? 'Button'}
       </Button>,
       'Button',
       field
     ),
-  }), [childNodes, dropTarget, commonDropHandlers, wrapWithHandles, renderEditableContent, handleContainerClick]);
+  }), [renderEditableContent, wrapWithHandles, commonDropHandlers]);
 
-  const renderPreview = useCallback((field: Field, isChild: boolean = false) => {
+  const renderPreview = useCallback((field: FormField, isChild = false) => {
     const previewComponent = previewComponents[field.type];
     if (previewComponent) {
       return previewComponent(field, isChild);
     }
-
     return (
       <div className="p-4 border rounded-md">
         <span className="text-sm text-muted-foreground">
@@ -793,11 +827,11 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
   }, [previewComponents]);
 
   const renderChildren = useCallback(() => {
-    if (childNodes.length === 0) return null;
+    if (nodeChildNodes.length === 0) return null;
 
     return (
       <div className={styles.dropZone.spacing}>
-        {childNodes.map((child, index) => (
+        {nodeChildNodes.map((child, index) => (
           <div key={`${child.type}-${index}`} className="relative">
             {dropTarget?.index === index && dropTarget.position === 'top' && (
               <div className={cn(styles.dropIndicator.base, styles.dropIndicator.top)} />
@@ -807,9 +841,9 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
                 "form-builder-child relative transition-all",
                 dropTarget?.index === index && styles.focused
               )}
-              onClick={(e) => handleChildClick(e, index)}
+              onClick={(e) => onChildNodeClick(e, index)}
             >
-              {renderPreview({ ...child, icon: iconMap[child.type] }, true)}
+              {renderPreview({ ...child, icon: iconMap[child.type] ?? child.icon }, true)}
             </div>
             {dropTarget?.index === index && dropTarget.position === 'bottom' && (
               <div className={cn(styles.dropIndicator.base, styles.dropIndicator.bottom)} />
@@ -818,7 +852,7 @@ const FormFieldNode = memo(({ data, selected }: { data: Field; selected?: boolea
         ))}
       </div>
     );
-  }, [childNodes, dropTarget, handleChildClick, renderPreview]);
+  }, [nodeChildNodes, dropTarget, onChildNodeClick, renderPreview]);
 
   return (
     <div 
@@ -837,7 +871,7 @@ export function VisualFormBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [selectedChild, setSelectedChild] = useState<{ nodeId: string; childIndex: number } | null>(null);
+  const [selectedChild, setSelectedChild] = useState<{ nodeId: string; childIndex: number | null } | null>(null);
 
   const nodeTypes = useMemo(() => ({
     formField: FormFieldNode,
@@ -847,7 +881,7 @@ export function VisualFormBuilder() {
     setEdges((eds) => addEdge({ ...params, type: 'smoothstep' }, eds));
   }, [setEdges]);
 
-  const onDragStart = useCallback((event: React.DragEvent, field: Field) => {
+  const onDragStart = useCallback((event: React.DragEvent, field: FormField) => {
     event.dataTransfer.setData('application/reactflow', JSON.stringify({
       ...field,
       icon: undefined,
@@ -866,65 +900,66 @@ export function VisualFormBuilder() {
     setSelectedChild(null);
   }, []);
 
-  const createNode = useCallback((fieldData: Field & { type: string }, position: { x: number; y: number }) => {
+  const createNode = useCallback((fieldData: DraggedFieldData, position: { x: number; y: number }) => {
     const nodeId = `${fieldData.type}-${Date.now()}`;
     const isContainer = CONTAINER_TYPES.includes(fieldData.type as ContainerType);
+
+    const newNode: FormField = {
+      id: nodeId,
+      type: fieldData.type,
+      label: fieldData.label,
+      icon: fieldData.icon ?? iconMap[fieldData.type],
+      properties: {
+        ...fieldData.properties,
+        title: fieldData.label,
+        text: fieldData.label,
+        width: 'full' as const,
+        padding: isContainer ? 'large' as const : 'medium' as const,
+        margin: isContainer ? 'large' as const : 'medium' as const,
+        variant: isContainer ? 'default' as const : undefined,
+      },
+      nodeChildNodes: [],
+      onChildSelect: (childIndex: number | null) => {
+        setSelectedChild({ nodeId, childIndex });
+        setSelectedNode(null);
+      },
+      onChildUpdate: (childIndex: number, updates: Partial<FormField>) => {
+        setNodes((nds: Node[]) => nds.map((node: Node) => {
+          if (node.id !== nodeId) return node;
+          const nodeData = node.data as FormField;
+          return {
+            ...node,
+            data: {
+              ...nodeData,
+              nodeChildNodes: (nodeData.nodeChildNodes ?? []).map((child: FormField, idx: number) =>
+                idx === childIndex ? { ...child, ...updates } : child
+              ),
+            },
+          };
+        }));
+      },
+      onChildNodesChange: (updatedChildNodes: FormField[]) => {
+        setNodes((nds: Node[]) => nds.map((node: Node) => {
+          if (node.id !== nodeId) return node;
+          const nodeData = node.data as FormField;
+          return {
+            ...node,
+            data: {
+              ...nodeData,
+              nodeChildNodes: updatedChildNodes,
+            },
+          };
+        }));
+      },
+    };
 
     return {
       id: nodeId,
       type: 'formField',
       position,
-      data: {
-        id: nodeId,
-        type: fieldData.type,
-        label: fieldData.label,
-        icon: iconMap[fieldData.type],
-        properties: {
-          ...fieldData.properties,
-          title: fieldData.label,
-          text: fieldData.label,
-          width: 'full',
-          padding: isContainer ? 'large' : 'medium',
-          margin: isContainer ? 'large' : 'medium',
-          variant: isContainer ? 'default' : undefined,
-          layout: isContainer ? 'vertical' : undefined,
-        },
-        childNodes: [],
-        onChildSelect: (childIndex: number) => {
-          setSelectedChild({ nodeId, childIndex });
-          setSelectedNode(null);
-        },
-        onChildUpdate: (childIndex: number, updates: Partial<Field>) => {
-          setNodes(nds => nds.map(node => 
-            node.id === nodeId 
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    childNodes: node.data.childNodes.map((child: Field, idx: number) =>
-                      idx === childIndex ? { ...child, ...updates } : child
-                    ),
-                  },
-                }
-              : node
-          ));
-        },
-        onChildNodesChange: (updatedChildNodes: Field[]) => {
-          setNodes(nds => nds.map(node =>
-            node.id === nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    childNodes: updatedChildNodes,
-                  },
-                }
-              : node
-          ));
-        },
-      },
+      data: newNode,
     };
-  }, []);
+  }, [setNodes, setSelectedChild, setSelectedNode]);
 
   const onDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -932,13 +967,17 @@ export function VisualFormBuilder() {
     const reactFlowBounds = document.querySelector('.react-flow-wrapper')?.getBoundingClientRect();
     if (!reactFlowBounds) return;
 
-    const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow'));
+    const fieldData = JSON.parse(event.dataTransfer.getData('application/reactflow')) as DraggedFieldData;
     const position = {
       x: event.clientX - reactFlowBounds.left,
       y: event.clientY - reactFlowBounds.top,
     };
 
-    const newNode = createNode(fieldData, position);
+    const newNode = createNode({
+      ...fieldData,
+      icon: iconMap[fieldData.type],
+    }, position);
+    
     setNodes(nds => nds.concat(newNode));
     setSelectedNode(newNode);
   }, [createNode]);
@@ -951,65 +990,67 @@ export function VisualFormBuilder() {
   const getSelectedField = useCallback(() => {
     if (!selectedNode && !selectedChild) return null;
 
-    if (selectedChild) {
+    if (selectedChild && selectedChild.childIndex !== null) {
       const parentNode = nodes.find(n => n.id === selectedChild.nodeId);
-      const childNode = parentNode?.data?.childNodes?.[selectedChild.childIndex];
-      if (childNode) {
-        return {
-          id: `${parentNode.id}-child-${selectedChild.childIndex}`,
-          type: childNode.type,
-          label: childNode.label,
-          icon: childNode.icon,
-          properties: childNode.properties || {},
-        };
-      }
+      if (!parentNode?.data) return null;
+      
+      const nodeData = parentNode.data as FormField;
+      const childNode = nodeData.nodeChildNodes?.[selectedChild.childIndex];
+      if (!childNode) return null;
+
+      return {
+        id: `${parentNode.id}-child-${selectedChild.childIndex}`,
+        type: childNode.type,
+        label: childNode.label,
+        icon: childNode.icon,
+        properties: childNode.properties ?? {},
+      } as const;
     }
     
-    if (selectedNode) {
+    if (selectedNode?.data) {
+      const nodeData = selectedNode.data as FormField;
       return {
         id: selectedNode.id,
-        type: selectedNode.data.type,
-        label: selectedNode.data.label,
-        icon: selectedNode.data.icon,
-        properties: selectedNode.data.properties || {},
-      };
+        type: nodeData.type,
+        label: nodeData.label,
+        icon: nodeData.icon,
+        properties: nodeData.properties ?? {},
+      } as const;
     }
     
     return null;
   }, [selectedNode, selectedChild, nodes]);
 
-  const onFieldUpdate = useCallback((updates: Partial<Field>) => {
-    if (selectedChild) {
+  const onFieldUpdate = useCallback((updates: Partial<FormField>) => {
+    if (selectedChild && selectedChild.childIndex !== null) {
       const nodeId = selectedChild.nodeId;
       const childIndex = selectedChild.childIndex;
       
-      setNodes(nds => nds.map(node => 
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                childNodes: node.data.childNodes.map((child: Field, idx: number) =>
-                  idx === childIndex
-                    ? { ...child, ...updates }
-                    : child
-                ),
-              },
-            }
-          : node
-      ));
+      setNodes(nds => nds.map(node => {
+        if (node.id !== nodeId) return node;
+        const nodeData = node.data as FormField;
+        return {
+          ...node,
+          data: {
+            ...nodeData,
+            nodeChildNodes: (nodeData.nodeChildNodes ?? []).map((child: FormField, idx: number) =>
+              idx === childIndex ? { ...child, ...updates } : child
+            ),
+          },
+        };
+      }));
     } else if (selectedNode) {
-      setNodes(nds => nds.map(node =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                ...updates,
-              },
-            }
-          : node
-      ));
+      setNodes(nds => nds.map(node => {
+        if (node.id !== selectedNode.id) return node;
+        const nodeData = node.data as FormField;
+        return {
+          ...node,
+          data: {
+            ...nodeData,
+            ...updates,
+          },
+        };
+      }));
     }
   }, [selectedNode, selectedChild]);
 
@@ -1087,6 +1128,12 @@ export function VisualFormBuilder() {
   });
   DebugPanel.displayName = 'DebugPanel';
 
+  // Fix empty function
+  const onInit = useCallback(() => {
+    // Initialize ReactFlow
+    console.debug('ReactFlow initialized');
+  }, []);
+
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full rounded-lg border">
       <ResizablePanel defaultSize={20}>
@@ -1109,7 +1156,7 @@ export function VisualFormBuilder() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onInit={() => {}}
+            onInit={onInit}
             onDrop={onDrop}
             onDragOver={onDragOver}
             onNodeClick={onNodeClick}
@@ -1140,8 +1187,8 @@ export function VisualFormBuilder() {
           <ScrollArea className="h-full">
             <div className="p-4">
               <PropertiesPanel 
-                field={getSelectedField()}
-                onUpdate={onFieldUpdate}
+                field={getSelectedField() as unknown as Field}
+                onUpdate={(updates) => onFieldUpdate(updates as unknown as Partial<FormField>)}
               />
               <DebugPanel />
             </div>

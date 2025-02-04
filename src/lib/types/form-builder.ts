@@ -1,15 +1,17 @@
 import { z } from "zod"
+import { LucideIcon } from 'lucide-react';
+import { ReactNode } from 'react';
 
 // Field types supported by the form builder
 export const fieldTypes = [
-  "text",
-  "number",
-  "email",
-  "select",
-  "multiselect",
-  "date",
-  "checkbox",
-  "textarea",
+  'input',
+  'textarea',
+  'select',
+  'checkbox',
+  'radio',
+  'button',
+  'heading',
+  'paragraph',
 ] as const
 
 export type FieldType = typeof fieldTypes[number]
@@ -58,4 +60,44 @@ export const formBuilderSchema = z.object({
 
 export type FormField = z.infer<typeof formFieldSchema>
 export type FormStep = z.infer<typeof formStepSchema>
-export type FormBuilderData = z.infer<typeof formBuilderSchema> 
+export type FormBuilderData = z.infer<typeof formBuilderSchema>
+
+export type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+
+export interface Field {
+  id: string;
+  type: string;
+  label: string;
+  icon: LucideIcon;
+  preview?: ReactNode;
+  onSelect?: () => void;
+  onChildSelect?: (index: number | null) => void;
+  onChildUpdate?: (index: number, updates: Partial<Field>) => void;
+  onChildNodesChange?: (nodes: Field[]) => void;
+  childNodes?: Field[];
+  properties: {
+    placeholder?: string;
+    helpText?: string;
+    required?: boolean;
+    validation?: string;
+    width?: string;
+    alignment?: 'left' | 'center' | 'right';
+    padding?: 'none' | 'small' | 'medium' | 'large';
+    margin?: 'none' | 'small' | 'medium' | 'large';
+    options?: { label: string; value: string }[];
+    minLength?: number;
+    maxLength?: number;
+    min?: number;
+    max?: number;
+    group?: string;
+    isGroupHeader?: boolean;
+    inputStyle?: {
+      size?: 'small' | 'medium' | 'large';
+    };
+    title?: string;
+    text?: string;
+    isContainer?: boolean;
+    label?: string;
+    variant?: ButtonVariant;
+  };
+} 

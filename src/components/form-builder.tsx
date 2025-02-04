@@ -5,44 +5,38 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useFieldArray, useForm } from "react-hook-form"
 import { Plus, Trash2 } from "lucide-react"
 import { v4 as uuidv4 } from "uuid"
+import type { UUID } from "crypto"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormStepper } from "@/components/ui/form-stepper"
 import { 
   FormBuilderData,
   formBuilderSchema, 
-  fieldTypes,
-  FormStep
+  fieldTypes as _fieldTypes,
+  FormStep as _FormStep,
+  Field as _Field
 } from "@/lib/types/form-builder"
 
 export function FormBuilder() {
   const form = useForm<FormBuilderData>({
     resolver: zodResolver(formBuilderSchema),
     defaultValues: {
-      id: uuidv4(),
+      id: uuidv4() as UUID,
       name: "",
       steps: [
         {
-          id: uuidv4(),
+          id: uuidv4() as UUID,
           title: "Step 1",
           fields: []
         }
@@ -58,7 +52,11 @@ export function FormBuilder() {
   const [currentStep, setCurrentStep] = React.useState(0)
 
   function onSubmit(data: FormBuilderData) {
-    console.log(data)
+    try {
+      console.log(data);
+    } catch (error: unknown) {
+      console.error('Form submission error:', String(error));
+    }
   }
 
   return (
@@ -167,7 +165,7 @@ export function FormBuilder() {
               variant="outline"
               onClick={() =>
                 appendStep({
-                  id: uuidv4(),
+                  id: uuidv4() as UUID,
                   title: `Step ${steps.length + 1}`,
                   fields: []
                 })

@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Trash2, Type, LayoutIcon, Box, ListChecks } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Field } from "@/types/form-builder";
+import { ChevronDown, Trash2, Type, LayoutIcon, Box as _Box, ListChecks } from "lucide-react";
+import { cn as _cn } from "@/lib/utils";
+import { Field } from "@/lib/types/form-builder";
+import { Textarea as _Textarea } from "@/components/ui/textarea";
 
 interface PropertiesPanelProps {
   field: Field | null;

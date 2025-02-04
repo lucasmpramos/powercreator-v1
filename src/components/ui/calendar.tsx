@@ -58,13 +58,49 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeftIcon className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRightIcon className="h-4 w-4" />,
+        IconLeft: ({ ..._props }) => <ChevronLeftIcon className="h-4 w-4" />,
+        IconRight: ({ ..._props }) => <ChevronRightIcon className="h-4 w-4" />,
       }}
       {...props}
     />
   )
 }
 Calendar.displayName = "Calendar"
+
+const TableHead = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+  <th
+    className={cn(
+      "text-muted-foreground font-normal text-[0.8rem]",
+      className
+    )}
+    {...props}
+  />
+)
+
+const TableCell = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+  <td
+    className={cn(
+      "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+      className
+    )}
+    {...props}
+  />
+)
+
+const TableRow = ({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
+  <tr className={cn(className)} {...props} />
+)
+
+const Head = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
+  <thead className={cn(className)} {...props} />
+)
+
+const Cell = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
+  <td className={cn(className)} {...props} />
+)
+
+const Row = ({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
+  <tr className={cn(className)} {...props} />
+)
 
 export { Calendar }

@@ -1,11 +1,7 @@
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
   Bot,
-  Command,
   Frame,
-  GalleryVerticalEnd,
   LifeBuoy,
   Map,
   PieChart,
@@ -17,7 +13,6 @@ import {
   LayoutDashboard,
   Users,
   Moon,
-  Bolt,
   Zap,
   FileText,
   Tag,
@@ -33,9 +28,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
 const data = {

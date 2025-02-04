@@ -26,7 +26,7 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 // Helper function to manage localStorage
 const storage = {
-  get: (defaultValue: boolean = true) => {
+  get: (defaultValue = true) => {
     try {
       const stored = localStorage.getItem(SIDEBAR_STATE_KEY)
       return stored !== null ? stored === "true" : defaultValue
@@ -43,7 +43,7 @@ const storage = {
   }
 }
 
-type SidebarContext = {
+type SidebarContextType = {
   state: "expanded" | "collapsed"
   open: boolean
   setOpen: (open: boolean) => void
@@ -53,7 +53,7 @@ type SidebarContext = {
   toggleSidebar: () => void
 }
 
-const SidebarContext = React.createContext<SidebarContext | null>(null)
+const SidebarContext = React.createContext<SidebarContextType | null>(null)
 
 function useSidebar() {
   const context = React.useContext(SidebarContext)
@@ -131,7 +131,7 @@ const SidebarProvider = React.forwardRef<
     // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? "expanded" : "collapsed"
 
-    const contextValue = React.useMemo<SidebarContext>(
+    const contextValue = React.useMemo<SidebarContextType>(
       () => ({
         state,
         open,
