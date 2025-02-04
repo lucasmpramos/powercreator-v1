@@ -70,7 +70,7 @@ export default function CategoriesPage() {
       <div className="flex flex-1 flex-col gap-4 p-0 pt-0">
         <div className="flex items-center justify-between mb-8">
           <PageHeader
-            heading="Template Categories"
+            heading="Categories"
             description="Organize your templates into categories"
           />
           <Button className="gap-2">
@@ -79,40 +79,40 @@ export default function CategoriesPage() {
           </Button>
         </div>
 
-        <Card>
+        <Card className="p-2">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead className="w-[250px]">Name</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Templates</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[100px]">Templates</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {categories.map((category) => (
                 <TableRow key={category.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="secondary" 
-                        className={cn(
-                          "hover:bg-secondary/80",
-                          category.color === "category-content" && "bg-category-content/10 text-category-content hover:bg-category-content/20",
-                          category.color === "category-format" && "bg-category-format/10 text-category-format hover:bg-category-format/20",
-                          category.color === "category-style" && "bg-category-style/10 text-category-style hover:bg-category-style/20",
-                          category.color === "category-knowledge" && "bg-category-knowledge/10 text-category-knowledge hover:bg-category-knowledge/20",
-                          category.color === "category-system" && "bg-category-system/10 text-category-system hover:bg-category-system/20"
-                        )}
-                      >
-                        {category.name}
-                      </Badge>
-                    </div>
+                  <TableCell className="font-medium">
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "hover:bg-secondary/80",
+                        category.color === "category-content" && "bg-category-content/10 text-category-content hover:bg-category-content/20",
+                        category.color === "category-format" && "bg-category-format/10 text-category-format hover:bg-category-format/20",
+                        category.color === "category-style" && "bg-category-style/10 text-category-style hover:bg-category-style/20",
+                        category.color === "category-knowledge" && "bg-category-knowledge/10 text-category-knowledge hover:bg-category-knowledge/20",
+                        category.color === "category-system" && "bg-category-system/10 text-category-system hover:bg-category-system/20"
+                      )}
+                    >
+                      {category.name}
+                    </Badge>
                   </TableCell>
-                  <TableCell>{category.description}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {category.description}
+                  </TableCell>
                   <TableCell>{category.templatesCount}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Pencil className="h-4 w-4" />
                       </Button>
