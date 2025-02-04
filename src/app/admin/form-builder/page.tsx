@@ -6,12 +6,12 @@ import {
   useDroppable,
   PointerSensor,
   useSensor,
-  useSensors
+  useSensors,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
-  verticalListSortingStrategy
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -204,12 +204,21 @@ const FormBuilderContent = () => {
     })
   );
 
-  const handleDragStart = (event: { active: { id: string } }) => {
+  interface DragStartEventType {
+    active: { id: string };
+  }
+
+  interface DragEndEventType {
+    active: { id: string };
+    over: { id: string } | null;
+  }
+
+  const handleDragStart = (event: DragStartEventType) => {
     const { active } = event;
     const allFields: Field[] = fieldCategories.reduce<Field[]>((acc, category) => {
       return [...acc, ...category.fields.map((field): Field => ({
         ...field,
-        properties: field.properties || {}
+        properties: field.properties ?? {}
       }))];
     }, []);
     
@@ -234,7 +243,7 @@ const FormBuilderContent = () => {
     }
   };
 
-  const handleDragEnd = (event: { active: { id: string }; over: { id: string } | null }) => {
+  const handleDragEnd = (event: DragEndEventType) => {
     const { active, over } = event;
 
     if (!over) return;
@@ -619,14 +628,14 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
     const classes = ['block'];
     
     // Size classes
-    switch (field.properties.labelStyle?.size) {
+    switch (field.properties.labelStyle?.size ?? 'medium') {
       case 'small': classes.push('text-sm'); break;
       case 'large': classes.push('text-lg'); break;
       default: classes.push('text-base');
     }
     
     // Weight classes
-    switch (field.properties.labelStyle?.weight) {
+    switch (field.properties.labelStyle?.weight ?? 'normal') {
       case 'medium': classes.push('font-medium'); break;
       case 'bold': classes.push('font-bold'); break;
       default: classes.push('font-normal');
@@ -844,7 +853,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
     const classes = ['grid', 'gap-4'];
     
     if (step.layout?.type === 'grid') {
-      classes.push(`grid-cols-${step.layout.columns || 1}`);
+      classes.push(`grid-cols-${step.layout.columns ?? 1}`);
     } else if (step.layout?.type === 'columns') {
       classes.push('grid-cols-2');
     }
@@ -1000,7 +1009,7 @@ const Canvas = ({
               <SortableContext items={step.fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-0">
                   <DropIndicator id="canvas-top" isMainCanvas />
-                  {step.fields.map((field, index) => (
+                  {step.fields.map((field) => (
                     <React.Fragment key={field.id}>
                       <SortableFieldItem
                         field={field}
@@ -1028,25 +1037,26 @@ const DropIndicator = ({ id, isMainCanvas = false }: { id: string; isMainCanvas?
     id: id
   });
 
+  const baseClasses = ["transition-all"];
+
+  if (isMainCanvas) {
+    if (isOver) {
+      baseClasses.push("h-4 bg-primary/20");
+    } else {
+      baseClasses.push("h-1");
+    }
+  } else {
+    if (isOver) {
+      baseClasses.push("h-2 opacity-100 bg-primary/10");
+    } else {
+      baseClasses.push("h-0.5 mx-2 opacity-0");
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
-      className={cn(
-        "transition-all",
-        isMainCanvas ? (
-          // Main canvas drop area (top/bottom)
-          cn(
-            "h-1",
-            isOver && "h-4 bg-primary/20"
-          )
-        ) : (
-          // Between elements drop area
-          cn(
-            "h-0.5 mx-2 opacity-0",
-            isOver && "h-2 opacity-100 bg-primary/10"
-          )
-        )
-      )}
+      className={cn(baseClasses)}
     />
   );
 };
@@ -1063,7 +1073,7 @@ const SortableFieldItem = ({
   onDelete: (fieldId: string) => void;
   isSelected: boolean;
 }) => {
-  const sortable = useSortable({
+  const sortableProps = useSortable({
     id: field.id,
     data: {
       type: 'form-field',
@@ -1081,25 +1091,23 @@ const SortableFieldItem = ({
     transform,
     transition,
     isDragging,
-  } = sortable;
+  } = sortableProps;
 
-  const style = {
+  const style = transform ? {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 1 : 0,
-  };
+  } : undefined;
+
+  const baseClasses = ["group relative rounded-md transition-all"];
+  if (isDragging) baseClasses.push("opacity-50");
+  baseClasses.push(isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50");
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded-md transition-all ${
-        isDragging ? 'opacity-50' : ''
-      } ${
-        isSelected 
-          ? 'bg-primary/10 hover:bg-primary/15' 
-          : 'hover:bg-muted/50'
-      }`}
+      className={cn(baseClasses)}
       {...attributes}
     >
       <div className="flex items-center gap-2 py-1 px-2">

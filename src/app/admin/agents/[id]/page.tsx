@@ -7,14 +7,20 @@ import { AgentForm } from "@/components/agent-form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 
+interface Agent {
+  id?: string;
+  name: string;
+  description: string;
+  settings: Record<string, unknown>;
+}
+
 export default function AgentDetailsPage() {
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isNew = id === "new"
 
-  const handleSubmit = (data: any) => {
-    console.log("Saving agent:", data)
-    // Implement save logic
+  const handleSubmit = (_data: Agent) => {
+    // TODO: Implement save logic using data
     navigate("/admin/agents")
   }
 
@@ -55,7 +61,7 @@ export default function AgentDetailsPage() {
 
           <TabsContent value="settings" className="mt-4">
             <AgentForm
-              initialData={null} // Load agent data here
+             // initialData={null} // Load agent data here
               onSubmit={handleSubmit}
               onCancel={() => navigate("/admin/agents")}
               isEdit={!isNew}
