@@ -1,5 +1,3 @@
-/// <reference path='../../../types/dnd-kit-core.d.ts' />
-
 import React, { useState } from 'react';
 import {
   DndContext,
@@ -13,7 +11,7 @@ import {
 import {
   SortableContext,
   useSortable,
-  verticalListSortingStrategy,
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import PageTemplate from "@/components/page-template";
@@ -23,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -36,8 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { 
-  FormInput, 
-  LayoutDashboard, 
   Type, 
   ListChecks, 
   AlignLeft,
@@ -52,16 +47,12 @@ import {
   Trash2,
   GripVertical,
   Plus,
-  Grid3X3,
   AlignLeft as AlignLeftIcon,
   AlignCenter,
   AlignRight,
   Palette,
   Layout as LayoutIcon,
   Box,
-  Rows,
-  Columns,
-  ChevronLeft,
   ChevronRight,
   Pencil,
 } from 'lucide-react';
@@ -87,8 +78,30 @@ import {
 import { ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
+// Field value types
+type TextFieldValue = string;
+type NumberFieldValue = number;
+type BooleanFieldValue = boolean;
+type FileFieldValue = File | null;
+type SelectFieldValue = string;
+
+type FieldValue = TextFieldValue | NumberFieldValue | BooleanFieldValue | FileFieldValue | SelectFieldValue | null;
+
+type FieldType = 'text' | 'textarea' | 'number' | 'email' | 'date' | 'file' | 'select' | 'radio' | 'checkbox';
+
+interface FieldCategory {
+  name: string;
+  fields: Array<{
+    id: string;
+    type: FieldType;
+    label: string;
+    icon: React.ElementType;
+    properties: Field['properties'];
+  }>;
+}
+
 // Field Categories for better organization
-const fieldCategories = [
+const fieldCategories: FieldCategory[] = [
   {
     name: "Basic",
     fields: [
@@ -115,10 +128,9 @@ const fieldCategories = [
   }
 ];
 
-// Enhanced Field type with more properties
 type Field = {
   id: string;
-  type: string;
+  type: FieldType;
   label: string;
   icon: React.ElementType;
   properties: {
@@ -127,7 +139,7 @@ type Field = {
     required?: boolean;
     validation?: string;
     options?: { label: string; value: string }[];
-    defaultValue?: any;
+    defaultValue?: FieldValue;
     minLength?: number;
     maxLength?: number;
     min?: number;
@@ -137,7 +149,7 @@ type Field = {
     hidden?: boolean;
     dependent?: {
       field: string;
-      value: any;
+      value: FieldValue;
     };
     // Layout properties
     width?: 'full' | '1/2' | '1/3' | '1/4' | '2/3' | '3/4';
@@ -193,7 +205,7 @@ const FormBuilderContent = () => {
     })
   );
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: { active: { id: string } }) => {
     const { active } = event;
     const activeFieldTemplate = fieldCategories
       .flatMap(category => category.fields)
@@ -214,7 +226,7 @@ const FormBuilderContent = () => {
     }
   };
 
-  const handleDragEnd = (event: any) => {
+  const handleDragEnd = (event: { active: { id: string }, over: { id: string } | null }) => {
     const { active, over } = event;
 
     if (!over) return;
@@ -239,7 +251,7 @@ const FormBuilderContent = () => {
               { label: 'Option 2', value: 'option2' }
             ] : undefined
           }
-        };
+        } as Field;
 
         setSteps(prevSteps => {
           const newSteps = [...prevSteps];
@@ -499,7 +511,6 @@ const FormBuilderContent = () => {
                               <DraggableField 
                                 key={field.id} 
                                 field={field as Field} 
-                                onDragStart={handleDragStart} 
                               />
                             ))}
                           </div>
@@ -568,13 +579,29 @@ const FormBuilderContent = () => {
 // Form Preview Component
 const FormPreview = ({ steps }: { steps: Step[] }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, FieldValue>>({});
 
-  const handleFieldChange = (fieldId: string, value: any) => {
+  const handleFieldChange = (fieldId: string, value: FieldValue) => {
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
     }));
+  };
+
+  const getFieldValue = (field: Field): FieldValue => {
+    const value = formData[field.id];
+    if (value === undefined) return null;
+    
+    switch (field.type) {
+      case 'checkbox':
+        return Boolean(value);
+      case 'number':
+        return typeof value === 'number' ? value : null;
+      case 'file':
+        return value instanceof File ? value : null;
+      default:
+        return typeof value === 'string' ? value : null;
+    }
   };
 
   // Get label classes based on label style properties
@@ -673,16 +700,29 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
     const inputClasses = getInputClasses(field);
 
     const renderInput = () => {
+      const value = getFieldValue(field);
+      
       switch (field.type) {
         case 'text':
         case 'email':
-        case 'number':
+        case 'date':
           return (
             <Input
               type={field.type}
-              placeholder={field.properties.placeholder}
-              value={formData[field.id] || ''}
+              placeholder={field.properties.placeholder ?? ''}
+              value={typeof value === 'string' ? value : ''}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              required={field.properties.required}
+              className={inputClasses}
+            />
+          );
+        case 'number':
+          return (
+            <Input
+              type="number"
+              placeholder={field.properties.placeholder ?? ''}
+              value={typeof value === 'number' ? value : ''}
+              onChange={(e) => handleFieldChange(field.id, Number(e.target.value))}
               required={field.properties.required}
               min={field.properties.min}
               max={field.properties.max}
@@ -692,36 +732,19 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
         case 'textarea':
           return (
             <Textarea
-              placeholder={field.properties.placeholder}
-              value={formData[field.id] || ''}
+              placeholder={field.properties.placeholder ?? ''}
+              value={typeof value === 'string' ? value : ''}
               onChange={(e) => handleFieldChange(field.id, e.target.value)}
               required={field.properties.required}
               className={inputClasses}
             />
           );
         case 'select':
-          return (
-            <Select
-              value={formData[field.id] || ''}
-              onValueChange={(value) => handleFieldChange(field.id, value)}
-            >
-              <SelectTrigger className={inputClasses}>
-                <SelectValue placeholder={field.properties.placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.properties.options?.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          );
         case 'radio':
           return (
             <RadioGroup
-              value={formData[field.id] || ''}
-              onValueChange={(value) => handleFieldChange(field.id, value)}
+              value={typeof value === 'string' ? value : ''}
+              onValueChange={(val) => handleFieldChange(field.id, val)}
               className="space-y-2"
             >
               {field.properties.options?.map((option) => (
@@ -739,13 +762,25 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id={field.id}
-                checked={formData[field.id] || false}
-                onCheckedChange={(checked) => handleFieldChange(field.id, checked)}
+                checked={typeof value === 'boolean' ? value : false}
+                onCheckedChange={(checked) => handleFieldChange(field.id, !!checked)}
               />
               <Label htmlFor={field.id} className={labelClasses}>
-                {field.properties.placeholder || field.label}
+                {field.properties.placeholder ?? field.label}
               </Label>
             </div>
+          );
+        case 'file':
+          return (
+            <Input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                handleFieldChange(field.id, file);
+              }}
+              required={field.properties.required}
+              className={inputClasses}
+            />
           );
         default:
           return null;
@@ -890,11 +925,9 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
 
 // DraggableField component using dnd-kit hooks
 const DraggableField = ({
-  field,
-  onDragStart
+  field
 }: {
   field: Field;
-  onDragStart: (field: Field) => void;
 }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: field.id,
@@ -1020,14 +1053,7 @@ const SortableFieldItem = ({
   onDelete: (fieldId: string) => void;
   isSelected: boolean;
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const sortableReturn = useSortable({
     id: field.id,
     data: {
       type: 'form-field',
@@ -1037,6 +1063,15 @@ const SortableFieldItem = ({
       disabled: true
     }
   });
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = sortableReturn;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1190,7 +1225,7 @@ const PropertiesPanel = ({
                 <Label>Field Type</Label>
                 <Select
                   value={field.type}
-                  onValueChange={(value) => onUpdate({ type: value })}
+                  onValueChange={(value: FieldType) => onUpdate({ type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1218,7 +1253,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Field Width</Label>
                 <Select
-                  value={field.properties.width || 'full'}
+                  value={field.properties.width ?? 'full'}
                   onValueChange={(value) => 
                     onUpdate({ 
                       properties: { ...field.properties, width: value as Field['properties']['width'] }
@@ -1266,7 +1301,7 @@ const PropertiesPanel = ({
                 <div className="space-y-2">
                   <Label>Padding</Label>
                   <Select
-                    value={field.properties.padding || 'medium'}
+                    value={field.properties.padding ?? 'medium'}
                     onValueChange={(value) => 
                       onUpdate({
                         properties: { ...field.properties, padding: value as Field['properties']['padding'] }
@@ -1288,7 +1323,7 @@ const PropertiesPanel = ({
                 <div className="space-y-2">
                   <Label>Margin</Label>
                   <Select
-                    value={field.properties.margin || 'medium'}
+                    value={field.properties.margin ?? 'medium'}
                     onValueChange={(value) => 
                       onUpdate({
                         properties: { ...field.properties, margin: value as Field['properties']['margin'] }
@@ -1319,14 +1354,14 @@ const PropertiesPanel = ({
                 <div className="space-y-2">
                   <Label className="text-xs">Size</Label>
                   <Select
-                    value={field.properties.labelStyle?.size || 'medium'}
+                    value={field.properties.labelStyle?.size ?? 'medium'}
                     onValueChange={(value) => 
                       onUpdate({
                         properties: {
                           ...field.properties,
                           labelStyle: {
                             ...field.properties.labelStyle,
-                            size: value as Field['properties']['labelStyle']['size']
+                            size: value as NonNullable<Field['properties']['labelStyle']>['size']
                           }
                         }
                       })
@@ -1346,14 +1381,14 @@ const PropertiesPanel = ({
                 <div className="space-y-2">
                   <Label className="text-xs">Weight</Label>
                   <Select
-                    value={field.properties.labelStyle?.weight || 'normal'}
+                    value={field.properties.labelStyle?.weight ?? 'normal'}
                     onValueChange={(value) => 
                       onUpdate({
                         properties: {
                           ...field.properties,
                           labelStyle: {
                             ...field.properties.labelStyle,
-                            weight: value as Field['properties']['labelStyle']['weight']
+                            weight: value as NonNullable<Field['properties']['labelStyle']>['weight']
                           }
                         }
                       })
@@ -1378,14 +1413,14 @@ const PropertiesPanel = ({
                 <div className="space-y-2">
                   <Label className="text-xs">Variant</Label>
                   <Select
-                    value={field.properties.inputStyle?.variant || 'outline'}
+                    value={field.properties.inputStyle?.variant ?? 'outline'}
                     onValueChange={(value) => 
                       onUpdate({
                         properties: {
                           ...field.properties,
                           inputStyle: {
                             ...field.properties.inputStyle,
-                            variant: value as Field['properties']['inputStyle']['variant']
+                            variant: value as NonNullable<Field['properties']['inputStyle']>['variant']
                           }
                         }
                       })
@@ -1406,15 +1441,15 @@ const PropertiesPanel = ({
                   <div className="space-y-2">
                     <Label className="text-xs">Size</Label>
                     <Select
-                      value={field.properties.inputStyle?.size || 'medium'}
+                      value={field.properties.inputStyle?.size ?? 'medium'}
                       onValueChange={(value) => 
                         onUpdate({
                           properties: {
                             ...field.properties,
                             inputStyle: {
-                              ...field.properties.inputStyle,
-                              size: value as Field['properties']['inputStyle']['size']
-                            }
+                              ...(field.properties.inputStyle ?? {}),
+                              size: value
+                            } as NonNullable<Field['properties']['inputStyle']>
                           }
                         })
                       }
@@ -1433,15 +1468,15 @@ const PropertiesPanel = ({
                   <div className="space-y-2">
                     <Label className="text-xs">Border Radius</Label>
                     <Select
-                      value={field.properties.inputStyle?.borderRadius || 'medium'}
+                      value={field.properties.inputStyle?.borderRadius ?? 'medium'}
                       onValueChange={(value) => 
                         onUpdate({
                           properties: {
                             ...field.properties,
                             inputStyle: {
-                              ...field.properties.inputStyle,
-                              borderRadius: value as Field['properties']['inputStyle']['borderRadius']
-                            }
+                              ...(field.properties.inputStyle ?? {}),
+                              borderRadius: value
+                            } as NonNullable<Field['properties']['inputStyle']>
                           }
                         })
                       }
@@ -1512,7 +1547,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
-                  value={field.properties.placeholder || ''}
+                  value={field.properties.placeholder ?? ''}
                   onChange={(e) => 
                     onUpdate({ properties: { ...field.properties, placeholder: e.target.value } })
                   }
@@ -1523,7 +1558,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Help Text</Label>
                 <Input
-                  value={field.properties.helpText || ''}
+                  value={field.properties.helpText ?? ''}
                   onChange={(e) => 
                     onUpdate({ properties: { ...field.properties, helpText: e.target.value } })
                   }
@@ -1620,12 +1655,12 @@ const PropertiesPanel = ({
                     <Label>Minimum Value</Label>
                     <Input
                       type="number"
-                      value={field.properties.min || ''}
+                      value={field.properties.min ?? ''}
                       onChange={(e) => 
                         onUpdate({ 
                           properties: { 
                             ...field.properties, 
-                            min: parseInt(e.target.value) || undefined 
+                            min: parseInt(e.target.value) ?? undefined 
                           } 
                         })
                       }
@@ -1635,12 +1670,12 @@ const PropertiesPanel = ({
                     <Label>Maximum Value</Label>
                     <Input
                       type="number"
-                      value={field.properties.max || ''}
+                      value={field.properties.max ?? ''}
                       onChange={(e) => 
                         onUpdate({ 
                           properties: { 
                             ...field.properties, 
-                            max: parseInt(e.target.value) || undefined 
+                            max: parseInt(e.target.value) ?? undefined 
                           } 
                         })
                       }
@@ -1658,7 +1693,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Placeholder</Label>
                 <Input
-                  value={field.properties.placeholder || ''}
+                  value={field.properties.placeholder ?? ''}
                   onChange={(e) => 
                     onUpdate({ properties: { ...field.properties, placeholder: e.target.value } })
                   }
@@ -1669,7 +1704,7 @@ const PropertiesPanel = ({
               <div className="space-y-2">
                 <Label>Help Text</Label>
                 <Input
-                  value={field.properties.helpText || ''}
+                  value={field.properties.helpText ?? ''}
                   onChange={(e) => 
                     onUpdate({ properties: { ...field.properties, helpText: e.target.value } })
                   }
@@ -1684,20 +1719,6 @@ const PropertiesPanel = ({
   );
 };
 
-// FieldCard component used in the DragOverlay to show the dragging field
-const FieldCard = ({ field, dragging }: { field: Field; dragging?: boolean }) => {
-  const Icon = field.icon;
-  return (
-    <Button
-      variant="outline"
-      className={`w-48 justify-start ${dragging ? 'opacity-75' : ''}`}
-    >
-      <Icon className="mr-2 h-4 w-4" />
-      {field.label}
-    </Button>
-  );
-};
-
 export default function FormBuilderPage() {
   return (
     <PageTemplate
@@ -1709,4 +1730,4 @@ export default function FormBuilderPage() {
       <FormBuilderContent />
     </PageTemplate>
   );
-} 
+}
