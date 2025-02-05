@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FormElement } from "../types";
+import { FlowElement } from "../types/index";
 
 interface FlowElementsPanelProps {
-  elements: FormElement[];
-  onDragStart: (event: React.DragEvent<HTMLButtonElement>, element: FormElement) => void;
+  elements: FlowElement[];
+  onDragStart: (event: React.DragEvent<HTMLButtonElement>, element: FlowElement) => void;
 }
 
 export function FlowElementsPanel({ elements, onDragStart }: FlowElementsPanelProps) {
