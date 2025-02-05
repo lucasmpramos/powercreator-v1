@@ -25,7 +25,7 @@ import { nodeTypes } from './flow-nodeTypes';
 
 const flowElements: FlowElement[] = [
   { 
-    type: 'shadcnNode',
+    type: 'divNode',
     label: 'Node',
     icon: Box,
     defaultContent: 'New Node'
