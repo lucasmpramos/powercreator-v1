@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// DND imports specifically for form building
 import {
   DndContext,
   DragOverlay,
@@ -8,12 +9,18 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import type {
+  DragStartEvent,
+  DragEndEvent,
+} from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,17 +83,14 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import type { Field, FormStep, FieldType } from './types/form-builder';
+import type { FormDragData, FormDragType, DragData } from './types/dnd';
+import { LucideIcon } from 'lucide-react';
+import { generateId } from './utils/id';
+import { getWidthClass, getPaddingClass, getMarginClass } from './utils/style';
 
-// Field value types
-type TextFieldValue = string;
-type NumberFieldValue = number;
-type BooleanFieldValue = boolean;
-type FileFieldValue = File | null;
-type SelectFieldValue = string;
-
-type FieldValue = TextFieldValue | NumberFieldValue | BooleanFieldValue | FileFieldValue | SelectFieldValue | null;
-
-type FieldType = 'text' | 'textarea' | 'number' | 'email' | 'date' | 'file' | 'select' | 'radio' | 'checkbox';
+// Type definitions
+type FieldValue = string | number | boolean | File | null;
 
 interface FieldCategory {
   name: string;
@@ -94,9 +98,37 @@ interface FieldCategory {
     id: string;
     type: FieldType;
     label: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     properties: Field['properties'];
   }>;
+}
+
+interface FormStepWithLayout extends FormStep {
+  layout?: {
+    type: 'default' | 'grid' | 'columns';
+    columns?: number;
+    gap?: 'small' | 'medium' | 'large';
+  };
+}
+
+// Component Props Interfaces
+interface PropertiesPanelProps {
+  field: Field | null;
+  onUpdate: (updates: Partial<Field>) => void;
+}
+
+interface CanvasProps {
+  step: FormStepWithLayout;
+  onFieldSelect: (field: Field) => void;
+  onDeleteField: (fieldId: string) => void;
+  selectedFieldId?: string;
+}
+
+interface SortableFieldItemProps {
+  field: Field;
+  onSelect: (field: Field) => void;
+  onDelete: (fieldId: string) => void;
+  isSelected: boolean;
 }
 
 // Field Categories for better organization
@@ -104,91 +136,32 @@ const fieldCategories: FieldCategory[] = [
   {
     name: "Basic",
     fields: [
-      { id: 'field-text', type: 'text', label: 'Text Input', icon: Type, properties: {} },
-      { id: 'field-textarea', type: 'textarea', label: 'Text Area', icon: AlignLeft, properties: {} },
-      { id: 'field-number', type: 'number', label: 'Number', icon: ListChecks, properties: {} },
-      { id: 'field-email', type: 'email', label: 'Email', icon: Mail, properties: {} },
+      { id: 'field-text', type: 'text' as FieldType, label: 'Text Input', icon: Type as LucideIcon, properties: {} },
+      { id: 'field-textarea', type: 'textarea' as FieldType, label: 'Text Area', icon: AlignLeft as LucideIcon, properties: {} },
+      { id: 'field-number', type: 'number' as FieldType, label: 'Number', icon: ListChecks as LucideIcon, properties: {} },
+      { id: 'field-email', type: 'email' as FieldType, label: 'Email', icon: Mail as LucideIcon, properties: {} },
     ]
   },
   {
     name: "Advanced",
     fields: [
-      { id: 'field-date', type: 'date', label: 'Date Picker', icon: Calendar, properties: {} },
-      { id: 'field-file', type: 'file', label: 'File Upload', icon: Upload, properties: {} },
-      { id: 'field-select', type: 'select', label: 'Dropdown', icon: FileInput, properties: {} }
+      { id: 'field-date', type: 'date' as FieldType, label: 'Date Picker', icon: Calendar as LucideIcon, properties: {} },
+      { id: 'field-file', type: 'file' as FieldType, label: 'File Upload', icon: Upload as LucideIcon, properties: {} },
+      { id: 'field-select', type: 'select' as FieldType, label: 'Dropdown', icon: FileInput as LucideIcon, properties: {} }
     ]
   },
   {
     name: "Choice",
     fields: [
-      { id: 'field-radio', type: 'radio', label: 'Radio Group', icon: Radio, properties: {} },
-      { id: 'field-checkbox', type: 'checkbox', label: 'Checkbox', icon: CheckSquare, properties: {} },
+      { id: 'field-radio', type: 'radio' as FieldType, label: 'Radio Group', icon: Radio as LucideIcon, properties: {} },
+      { id: 'field-checkbox', type: 'checkbox' as FieldType, label: 'Checkbox', icon: CheckSquare as LucideIcon, properties: {} },
     ]
   }
 ];
 
-type Field = {
-  id: string;
-  type: FieldType;
-  label: string;
-  icon: React.ElementType;
-  properties: {
-    placeholder?: string;
-    helpText?: string;
-    required?: boolean;
-    validation?: string;
-    options?: { label: string; value: string }[];
-    defaultValue?: FieldValue;
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    pattern?: string;
-    multiple?: boolean;
-    hidden?: boolean;
-    dependent?: {
-      field: string;
-      value: FieldValue;
-    };
-    // Layout properties
-    width?: 'full' | '1/2' | '1/3' | '1/4' | '2/3' | '3/4';
-    alignment?: 'left' | 'center' | 'right';
-    padding?: 'none' | 'small' | 'medium' | 'large';
-    margin?: 'none' | 'small' | 'medium' | 'large';
-    // Styling properties
-    labelStyle?: {
-      size?: 'small' | 'medium' | 'large';
-      weight?: 'normal' | 'medium' | 'bold';
-      color?: string;
-    };
-    inputStyle?: {
-      variant?: 'outline' | 'filled' | 'flushed';
-      size?: 'small' | 'medium' | 'large';
-      borderRadius?: 'none' | 'small' | 'medium' | 'large' | 'full';
-    };
-    // Group properties
-    group?: string;
-    isGroupHeader?: boolean;
-  };
-};
-
-type Step = {
-  id: string;
-  title: string;
-  description?: string;
-  fields: Field[];
-  // Layout properties for the step
-  layout?: {
-    type: 'default' | 'grid' | 'columns';
-    columns?: number;
-    gap?: 'small' | 'medium' | 'large';
-  };
-};
-
-const generateId = () => `id-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-const FormBuilderContent = () => {
-  const [steps, setSteps] = useState<Step[]>([
+// Components
+const FormBuilderContent: React.FC = () => {
+  const [steps, setSteps] = useState<FormStepWithLayout[]>([
     { id: generateId(), title: 'Step 1', description: 'First step of your form', fields: [] }
   ]);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -204,16 +177,7 @@ const FormBuilderContent = () => {
     })
   );
 
-  interface DragStartEventType {
-    active: { id: string };
-  }
-
-  interface DragEndEventType {
-    active: { id: string };
-    over: { id: string } | null;
-  }
-
-  const handleDragStart = (event: DragStartEventType) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const allFields: Field[] = fieldCategories.reduce<Field[]>((acc, category) => {
       return [...acc, ...category.fields.map((field): Field => ({
@@ -243,13 +207,13 @@ const FormBuilderContent = () => {
     }
   };
 
-  const handleDragEnd = (event: DragEndEventType) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over) return;
 
     // Handle dropping new fields from the sidebar
-    if (active.id.startsWith('field-')) {
+    if (typeof active.id === 'string' && active.id.startsWith('field-')) {
       const fieldTemplate = fieldCategories
         .flatMap((category) => category.fields)
         .find((field) => field.id === active.id);
@@ -270,17 +234,16 @@ const FormBuilderContent = () => {
           }
         };
 
-        setSteps((prevSteps: Step[]): Step[] => {
+        setSteps((prevSteps: FormStepWithLayout[]): FormStepWithLayout[] => {
           const newSteps = [...prevSteps];
           const currentFields = [...newSteps[currentStepIndex].fields];
           
-          if (over.id === 'canvas-top') {
+          if (over.id === 'form-start') {
             currentFields.unshift(newField);
-          } else if (over.id === 'canvas-bottom' || over.id === 'canvas-droppable') {
+          } else if (over.id === 'form-end') {
             currentFields.push(newField);
-          } else if (over.id.endsWith('-drop')) {
-            const targetId = over.id.replace('-drop', '');
-            const targetIndex = currentFields.findIndex((f: Field) => f.id === targetId);
+          } else {
+            const targetIndex = currentFields.findIndex((f: Field) => `field-${f.id}` === over.id);
             if (targetIndex !== -1) {
               currentFields.splice(targetIndex + 1, 0, newField);
             } else {
@@ -294,34 +257,25 @@ const FormBuilderContent = () => {
       }
     }
     // Handle reordering existing fields
-    else if (!active.id.startsWith('field-')) {
-      setSteps((prevSteps: Step[]): Step[] => {
+    else {
+      setSteps((prevSteps: FormStepWithLayout[]): FormStepWithLayout[] => {
         const newSteps = [...prevSteps];
         const currentFields = [...newSteps[currentStepIndex].fields];
-        const activeField = currentFields.find((f: Field) => f.id === active.id);
+        const activeField = currentFields.find((f: Field) => `field-${f.id}` === active.id);
         
         if (!activeField) return prevSteps;
 
         // Remove the field from its current position
-        const oldIndex = currentFields.findIndex((f: Field) => f.id === active.id);
+        const oldIndex = currentFields.findIndex((f: Field) => `field-${f.id}` === active.id);
         currentFields.splice(oldIndex, 1);
 
         // Insert the field at its new position
-        if (over.id === 'canvas-top') {
+        if (over.id === 'form-start') {
           currentFields.unshift(activeField);
-        } else if (over.id === 'canvas-bottom' || over.id === 'canvas-droppable') {
+        } else if (over.id === 'form-end') {
           currentFields.push(activeField);
-        } else if (over.id.endsWith('-drop')) {
-          const targetId = over.id.replace('-drop', '');
-          const targetIndex = currentFields.findIndex((f: Field) => f.id === targetId);
-          if (targetIndex !== -1) {
-            currentFields.splice(targetIndex + 1, 0, activeField);
-          } else {
-            currentFields.push(activeField);
-          }
         } else {
-          // If dropping directly on a field
-          const targetIndex = currentFields.findIndex((f: Field) => f.id === over.id);
+          const targetIndex = currentFields.findIndex((f: Field) => `field-${f.id}` === over.id);
           if (targetIndex !== -1) {
             currentFields.splice(targetIndex, 0, activeField);
           } else {
@@ -336,7 +290,7 @@ const FormBuilderContent = () => {
     setActiveField(null);
   };
 
-  const handleUpdateField = (fieldId: string, updates: Partial<Field>) => {
+  const handleUpdateField = (fieldId: string, updates: Partial<Field>): void => {
     setSteps((prevSteps) => {
       const newSteps = [...prevSteps];
       const stepIndex = currentStepIndex;
@@ -351,7 +305,7 @@ const FormBuilderContent = () => {
     });
   };
 
-  const handleDeleteField = (fieldId: string) => {
+  const handleDeleteField = (fieldId: string): void => {
     setSteps((prevSteps) => {
       const newSteps = [...prevSteps];
       newSteps[currentStepIndex].fields = newSteps[currentStepIndex].fields.filter(
@@ -362,12 +316,12 @@ const FormBuilderContent = () => {
     setSelectedField(null);
   };
 
-  const handleStepChange = (index: number) => {
+  const handleStepChange = (index: number): void => {
     setCurrentStepIndex(index);
     setSelectedField(null);
   };
 
-  const handleAddStep = () => {
+  const handleAddStep = (): void => {
     setSteps((prevSteps) => [
       ...prevSteps,
       { 
@@ -379,7 +333,7 @@ const FormBuilderContent = () => {
     ]);
   };
 
-  const handleUpdateStep = (stepId: string, updates: Partial<Step>) => {
+  const handleUpdateStep = (stepId: string, updates: Partial<FormStepWithLayout>): void => {
     setSteps(prevSteps => 
       prevSteps.map(step => 
         step.id === stepId ? { ...step, ...updates } : step
@@ -593,14 +547,11 @@ const FormBuilderContent = () => {
   );
 };
 
-export default FormBuilderContent;
-
-// Form Preview Component
-const FormPreview = ({ steps }: { steps: Step[] }) => {
+const FormPreview: React.FC<{ steps: FormStepWithLayout[] }> = ({ steps }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, FieldValue>>({});
 
-  const handleFieldChange = (fieldId: string, value: FieldValue) => {
+  const handleFieldChange = (fieldId: string, value: FieldValue): void => {
     setFormData(prev => ({
       ...prev,
       [fieldId]: value
@@ -623,8 +574,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
     }
   };
 
-  // Get label classes based on label style properties
-  const getLabelClasses = (field: Field) => {
+  const getLabelClasses = (field: Field): string => {
     const classes = ['block'];
     
     // Size classes
@@ -641,16 +591,11 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
       default: classes.push('font-normal');
     }
 
-    // Color
-    if (field.properties.labelStyle?.color) {
-      classes.push(`text-[${field.properties.labelStyle.color}]`);
-    }
-
     return classes.join(' ');
   };
 
   // Get input classes based on input style properties
-  const getInputClasses = (field: Field) => {
+  const getInputClasses = (field: Field): string => {
     const classes = [];
     
     // Base styles based on variant
@@ -658,10 +603,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
       case 'filled':
         classes.push('bg-muted');
         break;
-      case 'flushed':
-        classes.push('border-0 border-b rounded-none focus:ring-0');
-        break;
-      default: // outline
+      default:
         classes.push('bg-background');
     }
     
@@ -690,30 +632,27 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
   };
 
   // Get container classes for the field
-  const getFieldContainerClasses = (field: Field) => {
-    const classes = [
-      getWidthClass(field.properties.width),
-      getPaddingClass(field.properties.padding),
-      getMarginClass(field.properties.margin),
-    ];
+  const getFieldContainerClasses = (field: Field): string => {
+    const widthClass = getWidthClass(field.properties.width);
+    const paddingClass = getPaddingClass(field.properties.padding);
+    const marginClass = getMarginClass(field.properties.margin);
+    
+    const alignmentClass = field.properties.alignment === 'left' || 
+                          field.properties.alignment === 'center' || 
+                          field.properties.alignment === 'right' 
+                            ? `text-${field.properties.alignment}` 
+                            : undefined;
 
-    if (field.properties.alignment) {
-      classes.push(`text-${field.properties.alignment}`);
-    }
-
-    return classes.join(' ');
+    return cn(
+      widthClass,
+      paddingClass,
+      marginClass,
+      alignmentClass
+    );
   };
 
   // Render a single field with all its styling
   const renderField = (field: Field) => {
-    // Check field dependencies
-    if (field.properties.dependent) {
-      const { field: dependentField, value } = field.properties.dependent;
-      if (formData[dependentField] !== value) {
-        return null;
-      }
-    }
-
     const containerClasses = getFieldContainerClasses(field);
     const labelClasses = getLabelClasses(field);
     const inputClasses = getInputClasses(field);
@@ -794,7 +733,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
             <Input
               type="file"
               onChange={(e) => {
-                const file = e.target.files?.[0] || null;
+                const file = e.target.files?.[0] ?? null;
                 handleFieldChange(field.id, file);
               }}
               required={field.properties.required}
@@ -829,7 +768,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
   };
 
   // Group fields by their group property
-  const groupFields = (fields: Field[]) => {
+  const groupFields = (fields: Field[]): Record<string, Field[]> => {
     const groups: Record<string, Field[]> = {
       ungrouped: []
     };
@@ -849,7 +788,7 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
   };
 
   // Get classes for the form layout
-  const getLayoutClasses = (step: Step) => {
+  const getLayoutClasses = (step: FormStepWithLayout): string => {
     const classes = ['grid', 'gap-4'];
     
     if (step.layout?.type === 'grid') {
@@ -891,11 +830,11 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
   // Render the form content
   const renderFormContent = () => {
     const groups = groupFields(steps[currentStep].fields);
+    const entries = Object.entries(groups) as [string, Field[]][];
     
     return (
       <div className="space-y-8">
-        {/* Render grouped fields */}
-        {(Object.entries(groups) as Array<[string, Field[]]>).map(([groupName, fields]) => {
+        {entries.map(([groupName, fields]) => {
           if (groupName === 'ungrouped') {
             if (fields.length === 0) return null;
             return (
@@ -942,18 +881,15 @@ const FormPreview = ({ steps }: { steps: Step[] }) => {
   );
 };
 
-// DraggableField component using dnd-kit hooks
-const DraggableField = ({
-  field
-}: {
-  field: Field;
-}) => {
+const DraggableField: React.FC<{ field: Field }> = ({ field }) => {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: field.id,
     data: {
-      type: 'new-field',
-      field
-    }
+      current: {
+        type: 'form-template' as FormDragType,
+        field
+      } as FormDragData
+    } as DragData
   });
 
   return (
@@ -961,7 +897,10 @@ const DraggableField = ({
       <Button
         ref={setNodeRef}
         variant="outline"
-        className={`w-full justify-start ${isDragging ? 'opacity-50' : ''}`}
+        className={cn(
+          "w-full justify-start",
+          isDragging && "opacity-50"
+        )}
         {...listeners}
         {...attributes}
       >
@@ -972,20 +911,14 @@ const DraggableField = ({
   );
 };
 
-// Canvas component serves as the drop area for fields in the current step
-const Canvas = ({ 
+const Canvas: React.FC<CanvasProps> = ({ 
   step, 
   onFieldSelect,
   onDeleteField,
   selectedFieldId 
-}: { 
-  step: Step; 
-  onFieldSelect: (field: Field) => void;
-  onDeleteField: (fieldId: string) => void;
-  selectedFieldId?: string;
 }) => {
   const { setNodeRef: setDroppableRef, isOver: isDroppableOver } = useDroppable({ 
-    id: 'canvas-droppable',
+    id: 'form-container',
   });
   
   return (
@@ -995,8 +928,8 @@ const Canvas = ({
           <div 
             ref={setDroppableRef}
             className={cn(
-              "min-h-full h-full border-2 border-dashed rounded-lg p-2 transition-colors" as const,
-              isDroppableOver && ("bg-muted/50 border-primary/50" as const)
+              "min-h-full h-full border-2 border-dashed rounded-lg p-2 transition-colors",
+              isDroppableOver && "bg-muted/50 border-primary/50"
             )}
           >
             {step.fields.length === 0 ? (
@@ -1006,9 +939,9 @@ const Canvas = ({
                 </p>
               </div>
             ) : (
-              <SortableContext items={step.fields.map(f => f.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-0">
-                  <DropIndicator id="canvas-top" isMainCanvas />
+              <SortableContext items={step.fields.map(f => `field-${f.id}`)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  <DropIndicator id="form-start" />
                   {step.fields.map((field) => (
                     <React.Fragment key={field.id}>
                       <SortableFieldItem
@@ -1017,10 +950,9 @@ const Canvas = ({
                         onDelete={onDeleteField}
                         isSelected={selectedFieldId === field.id}
                       />
-                      <DropIndicator id={`${field.id}-drop`} />
                     </React.Fragment>
                   ))}
-                  <DropIndicator id="canvas-bottom" isMainCanvas />
+                  <DropIndicator id="form-end" />
                 </div>
               </SortableContext>
             )}
@@ -1031,59 +963,28 @@ const Canvas = ({
   );
 };
 
-// Update the DropIndicator component
-const DropIndicator = ({ id, isMainCanvas = false }: { id: string; isMainCanvas?: boolean }) => {
+const DropIndicator: React.FC<{ id: string }> = ({ id }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: id
   });
 
-  const baseClasses = ["transition-all"];
-
-  if (isMainCanvas) {
-    if (isOver) {
-      baseClasses.push("h-4 bg-primary/20");
-    } else {
-      baseClasses.push("h-1");
-    }
-  } else {
-    if (isOver) {
-      baseClasses.push("h-2 opacity-100 bg-primary/10");
-    } else {
-      baseClasses.push("h-0.5 mx-2 opacity-0");
-    }
-  }
-
   return (
     <div
       ref={setNodeRef}
-      className={cn(baseClasses)}
+      className={cn(
+        "transition-all",
+        isOver ? "h-2 bg-primary/20" : "h-0.5"
+      )}
     />
   );
 };
 
-// Update the SortableFieldItem component
-const SortableFieldItem = ({
+const SortableFieldItem: React.FC<SortableFieldItemProps> = ({
   field,
   onSelect,
   onDelete,
   isSelected,
-}: {
-  field: Field;
-  onSelect: (field: Field) => void;
-  onDelete: (fieldId: string) => void;
-  isSelected: boolean;
 }) => {
-  const sortableProps = useSortable({
-    id: field.id,
-    data: {
-      type: 'form-field',
-      field
-    },
-    resizeObserverConfig: {
-      disabled: true
-    }
-  });
-
   const {
     attributes,
     listeners,
@@ -1091,7 +992,16 @@ const SortableFieldItem = ({
     transform,
     transition,
     isDragging,
-  } = sortableProps;
+  } = useSortable({
+    id: field.id,
+    data: {
+      type: 'form-field' as FormDragType,
+      field
+    } as FormDragData,
+    resizeObserverConfig: {
+      disabled: true
+    }
+  });
 
   const style = transform ? {
     transform: CSS.Transform.toString(transform),
@@ -1099,15 +1009,15 @@ const SortableFieldItem = ({
     zIndex: isDragging ? 1 : 0,
   } : undefined;
 
-  const baseClasses = ["group relative rounded-md transition-all"];
-  if (isDragging) baseClasses.push("opacity-50");
-  baseClasses.push(isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50");
-
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn(baseClasses)}
+      className={cn(
+        "group relative rounded-md transition-all",
+        isDragging && "opacity-50",
+        isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50"
+      )}
       {...attributes}
     >
       <div className="flex items-center gap-2 py-1 px-2">
@@ -1138,45 +1048,9 @@ const SortableFieldItem = ({
   );
 };
 
-// Helper function to convert width to Tailwind classes
-const getWidthClass = (width?: string) => {
-  switch (width) {
-    case '1/2': return 'w-1/2';
-    case '1/3': return 'w-1/3';
-    case '2/3': return 'w-2/3';
-    case '1/4': return 'w-1/4';
-    case '3/4': return 'w-3/4';
-    default: return 'w-full';
-  }
-};
-
-// Helper function to get padding classes
-const getPaddingClass = (padding?: string) => {
-  switch (padding) {
-    case 'small': return 'p-2';
-    case 'medium': return 'p-4';
-    case 'large': return 'p-6';
-    default: return 'p-0';
-  }
-};
-
-// Helper function to get margin classes
-const getMarginClass = (margin?: string) => {
-  switch (margin) {
-    case 'small': return 'm-2';
-    case 'medium': return 'm-4';
-    case 'large': return 'm-6';
-    default: return 'm-0';
-  }
-};
-
-// PropertiesPanel component for editing properties of a selected field
-const PropertiesPanel = ({ 
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ 
   field, 
   onUpdate 
-}: { 
-  field: Field | null;
-  onUpdate: (updates: Partial<Field>) => void;
 }) => {
   const [openSections, setOpenSections] = useState<string[]>(['basic']); // Default open section
 
@@ -1466,8 +1340,8 @@ const PropertiesPanel = ({
                             ...field.properties,
                             inputStyle: {
                               ...(field.properties.inputStyle ?? {}),
-                              size: value
-                            } as NonNullable<Field['properties']['inputStyle']>
+                              size: value as NonNullable<Field['properties']['inputStyle']>['size']
+                            }
                           }
                         })
                       }
@@ -1493,8 +1367,8 @@ const PropertiesPanel = ({
                             ...field.properties,
                             inputStyle: {
                               ...(field.properties.inputStyle ?? {}),
-                              borderRadius: value
-                            } as NonNullable<Field['properties']['inputStyle']>
+                              borderRadius: value as NonNullable<Field['properties']['inputStyle']>['borderRadius']
+                            }
                           }
                         })
                       }
@@ -1623,3 +1497,5 @@ const PropertiesPanel = ({
     </ScrollArea>
   );
 };
+
+export default FormBuilderContent;

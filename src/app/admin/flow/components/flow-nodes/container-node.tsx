@@ -1,8 +1,10 @@
-import { memo } from 'react';
+import { memo, useRef, useState } from 'react';
 import { Handle, Position, NodeProps, Node } from 'reactflow';
-import { CustomNodeData, FlowElement } from '../../types/index';
+import { CustomNodeData } from '../../types/index';
 import { Card } from "@/components/ui/card";
-import divNode from './base-node';
+import { DropIndicator } from '../flow-drop-indicator';
+import { useDroppable } from '@dnd-kit/core';
+import { nodeTypes } from '../flow-nodeTypes';
 
 const nodeStyles = {
   background: 'none',
@@ -13,51 +15,101 @@ const nodeStyles = {
   boxShadow: 'none'
 };
 
-const DivNode = memo(divNode);
-
 function ContainerNode({ id, data, selected }: NodeProps<CustomNodeData>) {
-  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
+  const [dropTarget, setDropTarget] = useState<{ type: 'top' | 'bottom' | 'middle' | 'between', index?: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const childrenRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `droppable-${id}`,
+  });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isOver) {
+      setDropTarget(null);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const { top, height } = container.getBoundingClientRect();
+    const relativeY = e.clientY - top;
+    const threshold = height * 0.15;
+
+    if (relativeY < threshold) {
+      setDropTarget({ type: 'top' });
+      return;
+    }
+    if (relativeY > height - threshold) {
+      setDropTarget({ type: 'bottom' });
+      return;
+    }
+
+    if (data.children && data.children.length > 0) {
+      for (let i = 0; i < childrenRefs.current.length; i++) {
+        const childNode = childrenRefs.current[i];
+        if (!childNode) continue;
+
+        const { top: childTop, height: childHeight } = childNode.getBoundingClientRect();
+        const childCenter = childTop + childHeight / 2;
+
+        if (e.clientY < childCenter) {
+          setDropTarget({ type: 'between', index: i });
+          return;
+        }
+      }
+      setDropTarget({ type: 'between', index: childrenRefs.current.length });
+    } else {
+      setDropTarget({ type: 'middle' });
+    }
   };
 
-  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleMouseLeave = () => {
+    setDropTarget(null);
+  };
+
+  const renderChild = (child: Node<CustomNodeData>, index: number) => {
+    if (!child) return null;
     
-    try {
-      const element = JSON.parse(
-        event.dataTransfer.getData('application/reactflow')
-      ) as FlowElement;
-
-      // Create a proper node from the dropped element
-      const droppedNode: Node<CustomNodeData> = {
-        id: `node-${Date.now()}`,
-        type: 'divNode',
-        position: { x: 0, y: 0 },
-        data: {
-          label: element.label,
-          type: element.type,
-          properties: {
-            title: element.label,
-            placeholder: element.defaultContent,
-          },
-        },
-      };
-
-      if (data.onChildAdd && id) {
-        data.onChildAdd(id, droppedNode);
-      }
-    } catch (error) {
-      console.error('Error handling node drop:', error);
-    }
+    const nodeType = child.type ?? 'divNode';
+    const NodeType = nodeTypes[nodeType];
+    
+    return (
+      <div 
+        key={child.id} 
+        ref={el => childrenRefs.current[index] = el} 
+        className="relative" 
+        data-child-index={index}
+      >
+        <DropIndicator 
+          isVisible={isOver && dropTarget?.type === 'between' && dropTarget.index === index}
+          isTop
+        />
+        <NodeType
+          id={child.id}
+          type={nodeType}
+          data={child.data}
+          selected={!!child.selected}
+          dragging={false}
+          zIndex={0}
+          isConnectable={false}
+          xPos={0}
+          yPos={0}
+        />
+      </div>
+    );
   };
 
   return (
     <div style={nodeStyles}>
       <Card 
-        className={`min-w-[300px] min-h-[100px] ${selected ? 'ring-2 ring-primary' : ''}`}
+        ref={containerRef}
+        className={`min-w-[300px] min-h-[100px] relative ${selected ? 'ring-2 ring-primary' : ''} ${
+          isOver ? 'bg-muted/5' : ''
+        }`}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         <Handle
           type="target"
@@ -66,31 +118,30 @@ function ContainerNode({ id, data, selected }: NodeProps<CustomNodeData>) {
           style={{ width: 8, height: 8 }}
         />
         
-        <div 
-          className="p-4 min-h-[100px] flex flex-col gap-4"
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-        >
-          {data.children && data.children.length > 0 ? (
-            data.children.map((child) => (
-              <DivNode
-                key={child.id}
-                id={child.id}
-                type="divNode"
-                data={child.data}
-                selected={false}
-                dragging={false}
-                zIndex={0}
-                isConnectable={false}
-                xPos={0}
-                yPos={0}
+        <div ref={setNodeRef} className="relative h-full">
+          <DropIndicator isTop isVisible={isOver && dropTarget?.type === 'top'} />
+          
+          <div className={`min-h-[100px] flex flex-col gap-4 p-4 transition-colors ${
+            isOver && dropTarget?.type === 'middle' ? 'bg-muted/20 ring-2 ring-primary/20' : ''
+          }`}>
+            {data.children && data.children.length > 0 ? (
+              data.children.map((child, index) => renderChild(child, index))
+            ) : (
+              <div className={`text-sm text-muted-foreground text-center border-2 border-dashed transition-colors ${
+                isOver ? 'border-primary/50 bg-muted/10' : 'border-muted-foreground/20'
+              } rounded-lg p-4`}>
+                Drop nodes here
+              </div>
+            )}
+            {data.children && data.children.length > 0 && (
+              <DropIndicator 
+                isVisible={isOver && dropTarget?.type === 'between' && dropTarget.index === data.children.length}
+                isTop
               />
-            ))
-          ) : (
-            <div className="text-sm text-muted-foreground text-center border-2 border-dashed border-muted-foreground/20 rounded-lg p-4">
-              Drop nodes here
-            </div>
-          )}
+            )}
+          </div>
+
+          <DropIndicator isVisible={isOver && dropTarget?.type === 'bottom'} />
         </div>
 
         <Handle

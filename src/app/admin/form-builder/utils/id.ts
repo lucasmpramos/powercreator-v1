@@ -1,0 +1,1 @@
+export const generateId = (): string => `id-${Date.now()}-${Math.floor(Math.random() * 1000)}`; 

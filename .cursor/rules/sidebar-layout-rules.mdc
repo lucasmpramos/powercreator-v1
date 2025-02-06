@@ -71,5 +71,3 @@ export default function MyFeatureLayout({
   )
 }
 ```
-
-By providing these instructions in Markdown format (as shown above), you can direct the AI to use (and respect) your layout structure and UI standards.

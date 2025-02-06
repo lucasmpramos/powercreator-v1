@@ -1,14 +1,13 @@
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FlowElement } from "../types/index";
+import { FlowDraggable } from "./flow-draggable";
 
 interface FlowElementsPanelProps {
   elements: FlowElement[];
-  onDragStart: (event: React.DragEvent<HTMLButtonElement>, element: FlowElement) => void;
 }
 
-export function FlowElementsPanel({ elements, onDragStart }: FlowElementsPanelProps) {
+export function FlowElementsPanel({ elements }: FlowElementsPanelProps) {
   return (
     <Card className="h-full rounded-none border-0">
       <div className="flex flex-col h-full">
@@ -16,23 +15,16 @@ export function FlowElementsPanel({ elements, onDragStart }: FlowElementsPanelPr
           <h3 className="font-medium">Flow Elements</h3>
         </div>
         <ScrollArea className="flex-1">
-          <div className="px-4 pb-4">
-            <div className="grid gap-2">
-              {elements.map((element) => {
-                const Icon = element.icon;
-                return (
-                  <Button
-                    key={element.type}
-                    variant="outline"
-                    className="justify-start"
-                    draggable
-                    onDragStart={(e) => onDragStart(e, element)}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {element.label}
-                  </Button>
-                );
-              })}
+          <div className="p-4">
+            <div className="grid gap-3">
+              {elements.map((element) => (
+                <div 
+                  key={element.type}
+                  className="transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <FlowDraggable element={element} />
+                </div>
+              ))}
             </div>
           </div>
         </ScrollArea>

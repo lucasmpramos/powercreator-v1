@@ -1,0 +1,7 @@
+---
+description: For avoiding es linting errors
+globs: 
+---
+## For Typescript, to avoid lint errors:
+
+- Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator;
