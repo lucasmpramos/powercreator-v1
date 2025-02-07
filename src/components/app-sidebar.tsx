@@ -16,6 +16,7 @@ import {
   Zap,
   FileText,
   Tag,
+  Type,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -137,6 +138,12 @@ const data = {
     },
   ],
   navSecondary: [
+    {
+      title: "Font",
+      url: "#font",
+      icon: Type,
+      isFontToggle: true,
+    },
     {
       title: "Theme",
       url: "#theme",
