@@ -18,7 +18,7 @@ import 'reactflow/dist/style.css';
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { Box, LayoutGrid, Type } from 'lucide-react';
+import { Box, LayoutGrid, Type, Moon, LifeBuoy, Send } from 'lucide-react';
 import FlowPropertiesPanel from "./flow-properties-panel";
 import { CustomNodeData, FlowElement } from "../types/index";
 import { FlowElementsPanel } from "./flow-elements-panel";
