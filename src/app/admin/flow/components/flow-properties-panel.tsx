@@ -29,6 +29,7 @@ export default function FlowPropertiesPanel({ field, onUpdate }: FlowPropertiesP
   };
 
   const isParagraphNode = field.type === 'paragraphNode';
+  const isContainerNode = field.type === 'containerNode';
   const properties = field.data.properties as NodeProperties;
 
   return (
@@ -41,7 +42,57 @@ export default function FlowPropertiesPanel({ field, onUpdate }: FlowPropertiesP
             <div className="text-sm">{field.type}</div>
           </div>
 
-          {isParagraphNode ? (
+          {isContainerNode && (
+            <>
+              <div className="space-y-2">
+                <Label>Width</Label>
+                <Input
+                  value={properties.width ?? '300px'}
+                  onChange={(e) => handlePropertyChange('width', e.target.value)}
+                  placeholder="e.g., 300px, 100%, etc."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Min Height</Label>
+                <Input
+                  value={properties.minHeight ?? '100px'}
+                  onChange={(e) => handlePropertyChange('minHeight', e.target.value)}
+                  placeholder="e.g., 100px"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Padding</Label>
+                <Select 
+                  value={properties.padding ?? '4'}
+                  onValueChange={(value) => handlePropertyChange('padding', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">None</SelectItem>
+                    <SelectItem value="2">Small</SelectItem>
+                    <SelectItem value="4">Medium</SelectItem>
+                    <SelectItem value="6">Large</SelectItem>
+                    <SelectItem value="8">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Background Color</Label>
+                <Input
+                  value={properties.backgroundColor ?? 'transparent'}
+                  onChange={(e) => handlePropertyChange('backgroundColor', e.target.value)}
+                  placeholder="e.g., transparent, #fff, etc."
+                />
+              </div>
+            </>
+          )}
+
+          {isParagraphNode && (
             <>
               <div className="space-y-2">
                 <Label>Text Content</Label>
@@ -113,7 +164,9 @@ export default function FlowPropertiesPanel({ field, onUpdate }: FlowPropertiesP
                 />
               </div>
             </>
-          ) : (
+          )}
+
+          {!isParagraphNode && !isContainerNode && (
             Object.entries(field.data.properties || {}).map(([key, value]) => (
               <div key={key} className="space-y-2">
                 <Label className="capitalize">{key}</Label>

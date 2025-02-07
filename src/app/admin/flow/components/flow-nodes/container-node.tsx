@@ -1,19 +1,10 @@
 import { memo, useRef, useState } from 'react';
-import { Handle, Position, NodeProps, Node } from 'reactflow';
-import { CustomNodeData } from '../../types/index';
+import { Handle, Position, Node, NodeProps } from 'reactflow';
+import type { CustomNodeData } from '../../types';
 import { Card } from "@/components/ui/card";
 import { DropIndicator } from '../flow-drop-indicator';
 import { useDroppable } from '@dnd-kit/core';
 import { nodeTypes } from '../flow-nodeTypes';
-
-const nodeStyles = {
-  background: 'none',
-  border: 'none',
-  padding: 0,
-  borderRadius: 0,
-  width: 'fit-content',
-  boxShadow: 'none'
-};
 
 function ContainerNode({ id, data, selected }: NodeProps<CustomNodeData>) {
   const [dropTarget, setDropTarget] = useState<{ type: 'top' | 'bottom' | 'middle' | 'between', index?: number } | null>(null);
@@ -39,14 +30,9 @@ function ContainerNode({ id, data, selected }: NodeProps<CustomNodeData>) {
 
     if (relativeY < threshold) {
       setDropTarget({ type: 'top' });
-      return;
-    }
-    if (relativeY > height - threshold) {
+    } else if (relativeY > height - threshold) {
       setDropTarget({ type: 'bottom' });
-      return;
-    }
-
-    if (data.children && data.children.length > 0) {
+    } else if (data.children && data.children.length > 0) {
       for (let i = 0; i < childrenRefs.current.length; i++) {
         const childNode = childrenRefs.current[i];
         if (!childNode) continue;
@@ -69,88 +55,112 @@ function ContainerNode({ id, data, selected }: NodeProps<CustomNodeData>) {
     setDropTarget(null);
   };
 
-  const renderChild = (child: Node<CustomNodeData>, index: number) => {
-    if (!child) return null;
-    
-    const nodeType = child.type ?? 'divNode';
-    const NodeType = nodeTypes[nodeType];
-    
-    return (
-      <div 
-        key={child.id} 
-        ref={el => childrenRefs.current[index] = el} 
-        className="relative" 
-        data-child-index={index}
-      >
-        <DropIndicator 
-          isVisible={isOver && dropTarget?.type === 'between' && dropTarget.index === index}
-          isTop
-        />
-        <NodeType
-          id={child.id}
-          type={nodeType}
-          data={child.data}
-          selected={!!child.selected}
-          dragging={false}
-          zIndex={0}
-          isConnectable={false}
-          xPos={0}
-          yPos={0}
-        />
-      </div>
-    );
-  };
+  const {
+    width = '300px',
+    minHeight = '150px',
+    backgroundColor = 'white',
+    padding = '4',
+    gap = '4',
+  } = data.properties;
 
   return (
-    <div style={nodeStyles}>
+    <div className="react-flow__node-default nodrag" style={{ pointerEvents: 'none' }}>
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
+        style={{ pointerEvents: 'all' }}
+      />
+      
       <Card 
         ref={containerRef}
-        className={`min-w-[300px] min-h-[100px] relative ${selected ? 'ring-2 ring-primary' : ''} ${
-          isOver ? 'bg-muted/5' : ''
-        }`}
+        className={`relative bg-background ${selected ? 'ring-2 ring-primary' : 'border shadow-sm'}`}
+        style={{
+          width,
+          minHeight,
+          backgroundColor,
+          padding: `${padding}px`,
+          pointerEvents: 'all'
+        }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <Handle
-          type="target"
-          position={Position.Top}
-          className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
-          style={{ width: 8, height: 8 }}
-        />
-        
-        <div ref={setNodeRef} className="relative h-full">
+        <div 
+          ref={setNodeRef} 
+          className="relative h-full"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: `${gap}px`,
+          }}
+        >
           <DropIndicator isTop isVisible={isOver && dropTarget?.type === 'top'} />
           
-          <div className={`min-h-[100px] flex flex-col gap-4 p-4 transition-colors ${
+          <div className={`flex-1 min-h-[100px] flex flex-col gap-2 transition-colors ${
             isOver && dropTarget?.type === 'middle' ? 'bg-muted/20 ring-2 ring-primary/20' : ''
-          }`}>
+          }`}
+          style={{ pointerEvents: 'all' }}
+          >
             {data.children && data.children.length > 0 ? (
-              data.children.map((child, index) => renderChild(child, index))
+              <>
+                {data.children.map((child: Node<CustomNodeData>, index) => {
+                  if (!child.type || !nodeTypes[child.type]) return null;
+                  const NodeType = nodeTypes[child.type];
+
+                  return (
+                    <div 
+                      key={child.id} 
+                      ref={el => childrenRefs.current[index] = el} 
+                      className="relative w-full" 
+                      data-child-index={index}
+                      data-nodeid={child.id}
+                      style={{ pointerEvents: 'all' }}
+                    >
+                      <DropIndicator 
+                        isVisible={isOver && dropTarget?.type === 'between' && dropTarget.index === index}
+                        isTop
+                      />
+                      <div className="w-full" style={{ pointerEvents: 'all' }}>
+                        <NodeType
+                          id={child.id}
+                          type={child.type}
+                          data={child.data}
+                          selected={child.selected ?? false}
+                          isConnectable={false}
+                          xPos={child.position.x}
+                          yPos={child.position.y}
+                          zIndex={0}
+                          dragging={false}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
             ) : (
               <div className={`text-sm text-muted-foreground text-center border-2 border-dashed transition-colors ${
                 isOver ? 'border-primary/50 bg-muted/10' : 'border-muted-foreground/20'
               } rounded-lg p-4`}>
-                Drop nodes here
+                Drop elements here
               </div>
-            )}
-            {data.children && data.children.length > 0 && (
-              <DropIndicator 
-                isVisible={isOver && dropTarget?.type === 'between' && dropTarget.index === data.children.length}
-                isTop
-              />
             )}
           </div>
 
           <DropIndicator isVisible={isOver && dropTarget?.type === 'bottom'} />
         </div>
 
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
-          style={{ width: 8, height: 8 }}
-        />
+        {/* Resize handles */}
+        <div className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 nodrag" style={{ pointerEvents: 'all' }} />
+        <div className="absolute left-0 right-0 bottom-0 h-1 cursor-ns-resize hover:bg-primary/20 nodrag" style={{ pointerEvents: 'all' }} />
+        <div className="absolute right-0 bottom-0 w-2 h-2 cursor-se-resize hover:bg-primary/20 nodrag" style={{ pointerEvents: 'all' }} />
       </Card>
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
+        style={{ pointerEvents: 'all' }}
+      />
     </div>
   );
 }

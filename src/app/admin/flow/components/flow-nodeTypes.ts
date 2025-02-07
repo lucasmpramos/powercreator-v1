@@ -1,10 +1,10 @@
 import { NodeTypes } from 'reactflow';
-import divNode from './flow-nodes/base-node';
-import containerNode from './flow-nodes/container-node';
-import paragraphNode from './flow-nodes/paragraph-node';
+import BaseNode from './flow-nodes/base-node';
+import ContainerNode from './flow-nodes/container-node';
+import ParagraphNode from './flow-nodes/paragraph-node';
 
 export const nodeTypes: NodeTypes = {
-  divNode: divNode,
-  containerNode: containerNode,
-  paragraphNode: paragraphNode,
-}; 
+  divNode: BaseNode,
+  containerNode: ContainerNode,
+  paragraphNode: ParagraphNode,
+} as const; 

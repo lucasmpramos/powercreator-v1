@@ -1,16 +1,19 @@
 import { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { CustomNodeData, NodeProperties } from '../../types/index';
+import { CustomNodeData } from '../../types';
 import { cn } from '@/lib/utils';
 
 type PaddingSize = '0' | '2' | '4' | '6';
 
-function ParagraphNode({ data, selected }: NodeProps<CustomNodeData>) {
-  const properties = data.properties as NodeProperties;
-  const fontSize = properties.fontSize ?? 'base';
-  const textColor = properties.textColor ?? 'default';
-  const padding = (properties.padding ?? '0') as PaddingSize;
-  const showBackground = properties.showBackground ?? false;
+function ParagraphNode({ id: _id, data, selected }: NodeProps<CustomNodeData>) {
+  const {
+    fontSize = 'base',
+    textColor = 'default',
+    padding = '4',
+    showBackground = false
+  } = data.properties;
+
+  const paddingValue = (padding || '4') as PaddingSize;
 
   const textColorClasses = {
     default: 'text-foreground',
@@ -34,31 +37,30 @@ function ParagraphNode({ data, selected }: NodeProps<CustomNodeData>) {
   } as const;
 
   return (
-    <div className="!p-0 !border-0 !bg-transparent !shadow-none !min-w-0 !min-h-0">
-      <div 
-        className={cn(
-          'min-w-[300px]',
-          fontSizeClasses[fontSize],
-          textColorClasses[textColor],
-          paddingClasses[padding],
-          showBackground && 'bg-background rounded-lg shadow-sm',
-          selected && 'ring-1 ring-primary rounded-lg'
-        )}
-      >
-        {properties.placeholder}
-      </div>
-
+    <div className="react-flow__node-default">
       <Handle
         type="target"
         position={Position.Top}
         className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
-        style={{ width: 8, height: 8 }}
       />
+      
+      <div 
+        className={cn(
+          'min-w-[200px]',
+          fontSizeClasses[fontSize],
+          textColorClasses[textColor],
+          paddingClasses[paddingValue],
+          showBackground && 'bg-background rounded-lg shadow-sm',
+          selected && 'ring-2 ring-primary rounded-lg'
+        )}
+      >
+        {data.properties.placeholder ?? 'New Paragraph'}
+      </div>
+
       <Handle
         type="source"
         position={Position.Bottom}
         className="!border-0 !bg-muted-foreground/20 hover:!bg-muted-foreground/40 transition-colors"
-        style={{ width: 8, height: 8 }}
       />
     </div>
   );
