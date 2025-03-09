@@ -76,7 +76,7 @@ export default function UsersPage() {
           </Button>
         </div>
 
-        <Card>
+        <Card className="p-2">
           <Table>
             <TableHeader>
               <TableRow>
