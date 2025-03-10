@@ -108,7 +108,7 @@
     "tempo-devtools": "^2.0.94",
     "ts-node": "^10.9.2",
     "typescript": "^5.2.2",
-    "vite": "^6.2.1"
+    "vite": "^5.0.0"
   },
   "description": "PowerCreator - AI-Powered Content Creation Platform enabling teams to interact with intelligent AI agents for content generation, marketing campaigns, and more.",
   "main": "postcss.config.js",
